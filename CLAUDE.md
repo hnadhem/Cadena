@@ -1,25 +1,41 @@
-# CLAUDE.md
+# CLAUDE.md — HabIt Project
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project
+HabIt is a personal habit and fitness tracker for iOS and Android.
+Goal: help the user build and maintain daily habits with streaks, logging, and progress visibility.
+Status: early development — scaffolding in progress.
 
-## Project Overview
+## Stack
+- React Native + Expo SDK (latest stable)
+- Expo Router for file-based navigation
+- TypeScript — strict mode, no `any` without explicit justification
+- SQLite (expo-sqlite) for local data persistence
+- No backend or cloud sync — all data is device-local
 
-**HabIt** is a habit tracking application in early development. The repository currently contains only IntelliJ IDEA project configuration — source code has not yet been committed.
+## Commands
+To be updated once scaffolding is complete:
+- Install dependencies: `npm install`
+- Start dev server: `npx expo start`
+- Run tests: `npm test`
+- Type check: `npx tsc --noEmit`
 
-The IDE configuration (`.idea/workspace.xml`) shows TypeScript/JavaScript detected, suggesting this will be a TypeScript or Node.js-based project.
+## Folder Structure
+- `/app` — screens and routing (Expo Router convention)
+- `/components` — reusable UI components
+- `/db` — SQLite schema, migrations, and query functions
+- `/hooks` — custom React hooks
+- `/constants` — colors, spacing, typography tokens
 
-## Setup
-
-Once source code is added, update this file with:
-- How to install dependencies (e.g., `npm install`)
-- How to build (e.g., `npm run build`)
-- How to run the development server (e.g., `npm run dev`)
-- How to run tests (e.g., `npm test` or `npm run test -- <path>`)
-- How to lint (e.g., `npm run lint`)
+## Conventions
+- MUST use functional components with hooks — no class components
+- MUST keep all database logic in `/db` — never query SQLite directly from screens or components
+- MUST define all colors, spacing, and typography in `/constants` — no hardcoded style values
+- NEVER use `any` type without a comment explaining why
+- File names: kebab-case (e.g. `habit-card.tsx`)
+- Component names: PascalCase (e.g. `HabitCard`)
 
 ## Architecture
-
-To be documented once source code is committed. Update this section with:
-- Entry points and core modules
-- Data flow and state management approach
-- Key abstractions and how components relate
+To be documented as the project develops. Update with:
+- Core data models (Habit, Log, Streak)
+- State management approach
+- Key screens and navigation flow

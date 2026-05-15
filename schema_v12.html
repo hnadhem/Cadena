@@ -1,0 +1,938 @@
+f<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Full App Schema — Consolidated v12</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8f7f4; color: #1a1a1a; padding: 32px 24px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .doc-subtitle { font-size: 13px; color: #888; margin-bottom: 8px; }
+  .doc-meta { font-size: 11px; color: #bbb; margin-bottom: 40px; }
+  .toc { background: #fff; border: 1px solid #e8e6e0; border-radius: 12px; padding: 16px 20px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 24px; }
+  .toc-title { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; margin-bottom: 10px; grid-column: 1/-1; }
+  .toc-item { font-size: 12px; color: #5b8dd9; padding: 2px 0; }
+  .domain { margin-bottom: 48px; }
+  .domain-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #aaa; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #e8e6e0; }
+  .entity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .entity-grid.single { grid-template-columns: 1fr; }
+  .entity-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .card { background: #fff; border: 1px solid #e8e6e0; border-radius: 12px; overflow: hidden; }
+  .card-header { padding: 10px 14px 9px; border-bottom: 1px solid #e8e6e0; display: flex; align-items: baseline; gap: 8px; background: #faf9f7; }
+  .card-name { font-family: "SF Mono", Monaco, monospace; font-size: 13px; font-weight: 700; color: #1a1a1a; }
+  .card-desc { font-size: 11.5px; color: #999; }
+  .card-new { font-size: 9px; font-weight: 700; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px; margin-left: auto; }
+  .card-updated { font-size: 9px; font-weight: 700; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px; margin-left: auto; }
+  .field { display: grid; grid-template-columns: 190px 1fr; border-bottom: 1px solid #f0ede8; }
+  .field:last-child { border-bottom: none; }
+  .field-left { padding: 7px 10px 7px 14px; border-right: 1px solid #f0ede8; display: flex; flex-direction: column; gap: 2px; }
+  .field-name { font-family: "SF Mono", Monaco, monospace; font-size: 11px; color: #1a1a1a; }
+  .field-type { font-family: "SF Mono", Monaco, monospace; font-size: 10px; color: #bbb; line-height: 1.4; }
+  .field-right { padding: 7px 12px; font-size: 11.5px; color: #555; line-height: 1.5; display: flex; align-items: center; }
+  .field-new { background: #f0fdf4; }
+  .field-changed { background: #fffbeb; }
+  .col-stack { display: flex; flex-direction: column; gap: 16px; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-left: 5px; vertical-align: middle; }
+  .badge-fk { background: #ede9fe; color: #5b21b6; }
+  .badge-pk { background: #fef3c7; color: #92400e; }
+  .badge-unique { background: #dcfce7; color: #166534; }
+  .badge-derived { background: #e0f2fe; color: #075985; }
+  .enum-block { background: #fff; border: 1px solid #e8e6e0; border-radius: 12px; overflow: hidden; }
+  .enum-header { padding: 10px 14px 9px; border-bottom: 1px solid #e8e6e0; background: #faf9f7; display: flex; align-items: center; gap: 8px; }
+  .enum-name { font-family: "SF Mono", Monaco, monospace; font-size: 12px; font-weight: 700; color: #1a1a1a; }
+  .enum-values { padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .enum-val { font-family: "SF Mono", Monaco, monospace; font-size: 11px; background: #f4f4f4; padding: 2px 8px; border-radius: 4px; color: #333; }
+  .enum-val-new { background: #dcfce7; color: #166534; }
+  .enum-val-changed { background: #fffbeb; color: #92400e; }
+  .decisions { background: #fff; border: 1px solid #e8e6e0; border-left: 3px solid #22c55e; border-radius: 12px; overflow: hidden; margin-top: 16px; }
+  .decisions-header { padding: 10px 16px 8px; border-bottom: 1px solid #f0ede8; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; background: #fafdfb; }
+  .decision-item { display: grid; grid-template-columns: 220px 1fr; border-bottom: 1px solid #f0ede8; }
+  .decision-item:last-child { border-bottom: none; }
+  .decision-left { padding: 10px 14px; border-right: 1px solid #f0ede8; background: #f7fef9; }
+  .decision-key { font-size: 12px; font-weight: 600; color: #166534; }
+  .decision-right { padding: 10px 14px; font-size: 11.5px; color: #555; line-height: 1.6; }
+  .legend { display: flex; gap: 16px; margin-bottom: 24px; font-size: 11px; color: #555; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .tag-new { font-size:9px; font-weight:700; background:#dcfce7; color:#166534; padding:1px 6px; border-radius:4px; margin-left:8px; }
+</style>
+</head>
+<body>
+
+<h1>Full App Schema — Consolidated v12</h1>
+<p class="doc-subtitle">All entities, fields, types, and locked decisions</p>
+<p class="doc-meta">Updated · Added UserPreferences.seenProgressionIntentTooltip and modulesEnabled · Added WorkoutSession.workoutDate · Added retroactive window and completedAt write timing to canonical rules</p>
+
+<div class="legend">
+  <span>Legend:</span>
+  <div class="legend-item"><div class="legend-dot" style="background:#dcfce7;border:1px solid #86efac;"></div> New entity or field</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fffbeb;border:1px solid #fcd34d;"></div> Updated entity or field</div>
+</div>
+
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <div class="toc-item">1. User &amp; Preferences</div>
+  <div class="toc-item">2. Exercise Library</div>
+  <div class="toc-item">3. Workout Templates</div>
+  <div class="toc-item">4. Workout Sessions</div>
+  <div class="toc-item">5. Cardio Templates</div>
+  <div class="toc-item">6. Cardio Sessions</div>
+  <div class="toc-item">7. Personal Records</div>
+  <div class="toc-item">8. Goals</div>
+  <div class="toc-item">9. Daily Log</div>
+  <div class="toc-item">10. Journal</div>
+  <div class="toc-item">11. Habits</div>
+  <div class="toc-item">12. Nutrition &amp; Meds</div>
+  <div class="toc-item">13. Tally</div>
+  <div class="toc-item">14. Notifications</div>
+  <div class="toc-item">15. Enums Reference</div>
+  <div class="toc-item">16. Body Metrics</div>
+</div>
+
+<div class="domain">
+<div class="domain-label">1 &middot; User &amp; Preferences</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">User</span><span class="card-desc">identity and auth</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">UUID. Generated locally at first launch. Persists through account creation</div></div>
+<div class="field"><div class="field-left"><span class="field-name">email</span><span class="field-type">string? <span class="badge badge-unique">unique</span></span></div><div class="field-right">Null until user registers. Progressive auth — app works without it</div></div>
+<div class="field"><div class="field-left"><span class="field-name">displayName</span><span class="field-type">string?</span></div><div class="field-right">Optional. Used in UI greetings and future export headers</div></div>
+<div class="field"><div class="field-left"><span class="field-name">timezone</span><span class="field-type">string</span></div><div class="field-right">IANA format: "America/New_York". All date resolution uses this. Required from day one</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Local account creation timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">lastActiveAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Updated on each app open. Useful for retention prompts</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">onboardingCompletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Null until user completes onboarding flow. Useful for analytics and re-engagement logic</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">onboardingVersion</span><span class="field-type">string?</span></div><div class="field-right">Version identifier of the onboarding flow the user completed. e.g. v1, v2. Enables future migrations when onboarding changes</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">UserPreferences</span><span class="card-desc">display, units, and app behavior</span><span class="card-updated">updated v12</span></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span> <span class="badge badge-unique">unique</span></span></div><div class="field-right">1:1 with User</div></div>
+<div class="field"><div class="field-left"><span class="field-name">appMode</span><span class="field-type">AppMode</span></div><div class="field-right">Controls nav structure and visible modules. Set at onboarding, changeable in settings. Mode switches are non-destructive — data surfaces and unsurfaces, no fresh starts unless user explicitly resets</div></div>
+<div class="field"><div class="field-left"><span class="field-name">weightUnit</span><span class="field-type">'lbs' | 'kg'</span></div><div class="field-right">Display only. DB always stores lbs</div></div>
+<div class="field"><div class="field-left"><span class="field-name">distanceUnit</span><span class="field-type">'mi' | 'km'</span></div><div class="field-right">Display only. DB always stores miles</div></div>
+<div class="field"><div class="field-left"><span class="field-name">weekStartDay</span><span class="field-type">0–6</span></div><div class="field-right">0 = Sunday, 6 = Saturday. Consistent with daysOfWeek on HabitTarget</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultRestSeconds</span><span class="field-type">number?</span></div><div class="field-right">Global rest timer default. Overridden by ExerciseConfig where set</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">defaultReps</span><span class="field-type">number?</span></div><div class="field-right">Global default reps. Overridden by ExerciseConfig where set</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">defaultSets</span><span class="field-type">number?</span></div><div class="field-right">Global default sets. Overridden by ExerciseConfig where set</div></div>
+<div class="field"><div class="field-left"><span class="field-name">theme</span><span class="field-type">'light' | 'dark' | 'system'</span></div><div class="field-right">UI theme. System follows device setting</div></div>
+<div class="field"><div class="field-left"><span class="field-name">colorScheme</span><span class="field-type">'classic' | 'muted'</span></div><div class="field-right">Status color scheme. Defaults to muted. Applied via theme tokens — never hardcoded</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">requireBiometricForHiddenHabits</span><span class="field-type">boolean</span></div><div class="field-right">Default false. When true, accessing the hidden habits list requires biometric or passcode authentication. Applies to any habit where isHidden = true</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">dayEndTime</span><span class="field-type">time string</span></div><div class="field-right">Default "00:00". Configurable up to "04:00". Activity logged between midnight and this time counts toward the previous calendar day. Applied at display and streak calculation layer only — storage always uses the calendar date. Enables night owl use cases where habits complete after midnight</div></div>
+
+<div class="field field-new"><div class="field-left"><span class="field-name">seenProgressionIntentTooltip</span><span class="field-type">boolean</span></div><div class="field-right">Default false. Set to true after user sees the first-use tooltip for the progression intent selector in the workout player. Prevents repeat display</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">modulesEnabled</span><span class="field-type">EnabledModule[]</span></div><div class="field-right">Opt-in modules the user has enabled. Empty array = no optional modules active. Controls visibility of module-gated features without changing appMode</div></div>
+<div class="field"><div class="field-left"><span class="field-name">heightCm</span><span class="field-type">number?</span></div><div class="field-right">Stored in cm. Converted for display per unit preference</div></div>
+<div class="field"><div class="field-left"><span class="field-name">dateOfBirth</span><span class="field-type">ISO date?</span></div><div class="field-right">Age derived at query time. Never store age directly</div></div>
+<div class="field"><div class="field-left"><span class="field-name">biologicalSex</span><span class="field-type">'male' | 'female' | 'prefer_not_to_say'?</span></div><div class="field-right">Optional. Relevant for future calorie burn estimates</div></div>
+<div class="field"><div class="field-left"><span class="field-name">tdeeCalories</span><span class="field-type">number?</span></div><div class="field-right">User-entered TDEE. No calculator</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">goals</span><span class="field-type">GoalType[]</span></div><div class="field-right">Multi-select. App enforces a maximum of 3 selections. Replaces single primaryGoal field</div></div>
+</div>
+</div>
+</div>
+
+<!-- 2. EXERCISE LIBRARY -->
+<div class="domain">
+<div class="domain-label">2 &middot; Exercise Library</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">Exercise</span><span class="card-desc">single entry in the exercise library</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null = built-in. Populated = user-created custom exercise</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string</span></div><div class="field-right">"Flat Barbell Bench Press", "Plank", "Dead Hang"</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">category</span><span class="field-type">'workout' | 'cardio' | 'mobility'</span></div><div class="field-right">Top-level classification. sport removed — sports log as cardio sessions with type: sport</div></div>
+<div class="field"><div class="field-left"><span class="field-name">setMode</span><span class="field-type">'reps' | 'duration'</span></div><div class="field-right">How sets are logged. Flows down to every SetLog for this exercise</div></div>
+<div class="field"><div class="field-left"><span class="field-name">loadType</span><span class="field-type">LoadType</span></div><div class="field-right">weighted = all weight · bodyweight = added weight only · assisted = weight removed</div></div>
+<div class="field"><div class="field-left"><span class="field-name">muscleGroupsPrimary</span><span class="field-type">MuscleGroup[]</span></div><div class="field-right">Primary muscles targeted. Drives filtering and volume analysis</div></div>
+<div class="field"><div class="field-left"><span class="field-name">muscleGroupsSecondary</span><span class="field-type">MuscleGroup[]</span></div><div class="field-right">Secondary muscles. Shown with distinct visual treatment</div></div>
+<div class="field"><div class="field-left"><span class="field-name">equipment</span><span class="field-type">EquipmentType?</span></div><div class="field-right">Coarse enum. Used for filtering</div></div>
+<div class="field"><div class="field-left"><span class="field-name">attributes</span><span class="field-type">ExerciseAttribute[]</span></div><div class="field-right">Exercise-specific contextual fields. Informational only</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete for custom exercises. Built-in exercises are never deleted</div></div>
+</div>
+<div class="col-stack">
+<div class="card">
+<div class="card-header"><span class="card-name">ExerciseAttribute</span><span class="card-desc">exercise-specific contextual field definition</span></div>
+<div class="field"><div class="field-left"><span class="field-name">key</span><span class="field-type">string</span></div><div class="field-right">"inclineDegrees", "gripWidth"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">label</span><span class="field-type">string</span></div><div class="field-right">"Incline angle" — shown in UI</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">'number' | 'select'</span></div><div class="field-right">Drives the input type rendered in the logging UI</div></div>
+<div class="field"><div class="field-left"><span class="field-name">unit</span><span class="field-type">string?</span></div><div class="field-right">"°", "kg". Displayed alongside value</div></div>
+<div class="field"><div class="field-left"><span class="field-name">options</span><span class="field-type">string[]?</span></div><div class="field-right">For select type only: ["narrow", "medium", "wide"]</div></div>
+<div class="field"><div class="field-left"><span class="field-name">min / max</span><span class="field-type">number?</span></div><div class="field-right">Validation range for number type</div></div>
+</div>
+<div class="enum-block"><div class="enum-header"><span class="enum-name">MuscleGroup</span></div>
+<div class="enum-values"><span class="enum-val">chest</span><span class="enum-val">back</span><span class="enum-val">shoulders</span><span class="enum-val">biceps</span><span class="enum-val">triceps</span><span class="enum-val">forearms</span><span class="enum-val">core</span><span class="enum-val">glutes</span><span class="enum-val">quads</span><span class="enum-val">hamstrings</span><span class="enum-val">calves</span><span class="enum-val">full_body</span></div></div>
+<div class="enum-block"><div class="enum-header"><span class="enum-name">EquipmentType</span></div>
+<div class="enum-values"><span class="enum-val">barbell</span><span class="enum-val">dumbbell</span><span class="enum-val">cable</span><span class="enum-val">machine</span><span class="enum-val">bodyweight</span><span class="enum-val">kettlebell</span><span class="enum-val">bands</span><span class="enum-val">other</span></div></div>
+</div>
+</div>
+</div>
+
+<!-- 3. WORKOUT TEMPLATES -->
+<div class="domain">
+<div class="domain-label">3 &middot; Workout Templates</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">WorkoutTemplate</span><span class="card-desc">saved reusable workout plan</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required. All templates are user-owned</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string?</span></div><div class="field-right">Optional. Unnamed templates display as "Workout — [date]"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">description</span><span class="field-type">string?</span></div><div class="field-right">Optional notes about the template's purpose</div></div>
+<div class="field"><div class="field-left"><span class="field-name">color</span><span class="field-type">string?</span></div><div class="field-right">User-assigned hex. Distinguishes templates in calendar and routine views</div></div>
+<div class="field"><div class="field-left"><span class="field-name">exerciseConfigs</span><span class="field-type">ExerciseConfig[]</span></div><div class="field-right">Ordered list of exercises with defaults</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">lastUsedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Updated each time a session starts from this template. Drives recency sort</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete. Sessions referencing this template are unaffected</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">ExerciseConfig</span><span class="card-desc">one exercise's defaults within a template</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">exerciseId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Exercise library</div></div>
+<div class="field"><div class="field-left"><span class="field-name">order</span><span class="field-type">number</span></div><div class="field-right">Execution order within the template</div></div>
+<div class="field"><div class="field-left"><span class="field-name">groupId</span><span class="field-type">string?</span></div><div class="field-right">Shared groupId = superset or circuit. Null = standalone</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">groupType</span><span class="field-type">'superset' | 'circuit'?</span></div><div class="field-right">Required when groupId is set. Null when groupId is null. Used for display labeling in workout player and log</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultSets</span><span class="field-type">number</span></div><div class="field-right">Sets to pre-populate. Falls back to UserPreferences.defaultSets</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultReps</span><span class="field-type">number?</span></div><div class="field-right">Applied when exercise.setMode = reps. Falls back to UserPreferences.defaultReps</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultDurationSeconds</span><span class="field-type">number?</span></div><div class="field-right">Applied when exercise.setMode = duration</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultWeightLbs</span><span class="field-type">number?</span></div><div class="field-right">Pre-fills weight. Stored in lbs. Null for bodyweight exercises</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultRestSeconds</span><span class="field-type">number?</span></div><div class="field-right">Overrides user-level default rest timer for this exercise</div></div>
+<div class="field"><div class="field-left"><span class="field-name">progressionType</span><span class="field-type">'consistent' | 'progressive_overload'</span></div><div class="field-right">Template intent only. Does not constrain what gets logged</div></div>
+</div>
+</div>
+</div>
+
+
+<!-- WorkoutSchedule -->
+<div class="entity-grid" style="margin-top:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">WorkoutSchedule</span><span class="card-desc">recurring workout plan — generates planned WorkoutSession records</span><span class="card-new">new</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">templateId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to WorkoutTemplate. Defines what workout is scheduled</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string?</span></div><div class="field-right">Optional override name. Falls back to template name</div></div>
+<div class="field"><div class="field-left"><span class="field-name">frequencyType</span><span class="field-type">WorkoutScheduleFrequency</span></div><div class="field-right">Constrained subset of FrequencyType: specific_days_of_week | every_n_days | every_n_weeks</div></div>
+<div class="field"><div class="field-left"><span class="field-name">daysOfWeek</span><span class="field-type">number[]?</span></div><div class="field-right">Used when frequencyType = specific_days_of_week. 0–6 (Sun–Sat)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">intervalDays</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = every_n_days. Minimum 1</div></div>
+<div class="field"><div class="field-left"><span class="field-name">intervalWeeks</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = every_n_weeks. Minimum 1</div></div>
+<div class="field"><div class="field-left"><span class="field-name">scheduledTime</span><span class="field-type">time string?</span></div><div class="field-right">Optional time of day for scheduled sessions. Enables relative reminders</div></div>
+<div class="field"><div class="field-left"><span class="field-name">startDate</span><span class="field-type">ISO date</span></div><div class="field-right">When the schedule becomes active. Planned sessions generated from this date forward</div></div>
+<div class="field"><div class="field-left"><span class="field-name">endDate</span><span class="field-type">ISO date?</span></div><div class="field-right">Optional. Null = open-ended recurring schedule</div></div>
+<div class="field"><div class="field-left"><span class="field-name">isActive</span><span class="field-type">boolean</span></div><div class="field-right">Default true. False = paused schedule. Sessions already generated are unaffected</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete. Does not affect already-generated WorkoutSession records</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">WorkoutSchedule rules</span><span class="card-desc">locked logic decisions</span></div>
+<div class="field"><div class="field-left"><span class="field-name">Session generation</span><span class="field-type">—</span></div><div class="field-right">Application generates planned WorkoutSession records from active schedules. Generation runs on app open and looks ahead a configurable window (e.g. 4 weeks)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Status flow</span><span class="field-type">—</span></div><div class="field-right">Generated sessions start as status = planned. User starts → live → completed or skipped. Schedule is independent of session outcome</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Template changes</span><span class="field-type">—</span></div><div class="field-right">Changing a template does not retroactively alter already-generated sessions. New sessions pick up the updated template. templateNameSnapshot on session preserves historical display</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Deletion</span><span class="field-type">—</span></div><div class="field-right">Deleting a schedule soft-deletes it and stops future generation. Existing planned sessions are not automatically deleted — user clears manually if desired</div></div>
+</div>
+</div>
+</div>
+
+<!-- 4. WORKOUT SESSIONS -->
+<div class="domain">
+<div class="domain-label">4 &middot; Workout Sessions</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">WorkoutSession</span><span class="card-desc">the actual log of one workout</span><span class="card-updated">updated v12</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">templateId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null for ad-hoc sessions</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">scheduleId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to WorkoutSchedule that generated this session. Null for ad-hoc sessions. Unique constraint on (scheduleId, scheduledDate) prevents duplicate generation</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string?</span></div><div class="field-right">Inherited from template or user-named</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">templateNameSnapshot</span><span class="field-type">string?</span></div><div class="field-right">Template name at time session was created. Preserved if template is later renamed or deleted</div></div>
+<div class="field"><div class="field-left"><span class="field-name">status</span><span class="field-type">'planned' | 'live' | 'completed' | 'skipped'</span></div><div class="field-right">skipped = user explicitly marked planned session as not done</div></div>
+<div class="field"><div class="field-left"><span class="field-name">scheduledDate</span><span class="field-type">ISO date?</span></div><div class="field-right">Calendar day anchor. Required when status = planned</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">scheduledTime</span><span class="field-type">time string?</span></div><div class="field-right">Optional. Enables relative workout reminders. e.g. 17:00 for a 5pm session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">startedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">System-set when status moves to live. Immutable after set</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">completedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">System-set when status moves to completed. Set on session summary Save — not when End Session is tapped. Immutable after set. Never user-editable</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">System-set when record is created. Always reflects when data entered the system, not when workout occurred</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">isRetroactive</span><span class="field-type">boolean</span></div><div class="field-right">True when session was logged after the fact rather than tracked live. Default false</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">workoutDate</span><span class="field-type">ISO date?</span></div><div class="field-right">The calendar day the workout actually occurred. Null for live sessions — derived from startedAt at query time. Required when isRetroactive = true. Used as the anchor for the 3-day retroactive window check. Never derived from loggedAt</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">durationMinutes</span><span class="field-type">number? <span class="badge badge-derived">derived</span></span></div><div class="field-right">Derived from startedAt to completedAt. Directly overridable by user</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">durationOverridden</span><span class="field-type">boolean</span></div><div class="field-right">True when durationMinutes was set by user rather than derived. Default false</div></div>
+<div class="field"><div class="field-left"><span class="field-name">rpe</span><span class="field-type">number? (1–10)</span></div><div class="field-right">Overall session effort. Surfaced in journal and trends</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Free-text session note</div></div>
+<div class="field"><div class="field-left"><span class="field-name">exerciseLogs</span><span class="field-type">ExerciseLog[]</span></div><div class="field-right">All exercises performed in this session</div></div>
+</div>
+<div class="col-stack">
+<div class="card">
+<div class="card-header"><span class="card-name">ExerciseLog</span><span class="card-desc">one exercise within a session</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">sessionId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required FK to WorkoutSession. Non-nullable — every ExerciseLog must belong to a workout session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">exerciseId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Exercise library</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">exerciseNameSnapshot</span><span class="field-type">string</span></div><div class="field-right">Name of the exercise at time of logging. Preserved if exercise is later renamed or deleted</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">exerciseSetModeSnapshot</span><span class="field-type">'reps' | 'duration'</span></div><div class="field-right">setMode at time of logging. Preserved if exercise definition changes</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">exerciseLoadTypeSnapshot</span><span class="field-type">LoadType</span></div><div class="field-right">loadType at time of logging. Preserved if exercise definition changes</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">exerciseAttributesSnapshot</span><span class="field-type">Record&lt;string, any&gt;?</span></div><div class="field-right">Attribute definitions at time of logging. Preserved if attributes are later changed or removed</div></div>
+<div class="field"><div class="field-left"><span class="field-name">order</span><span class="field-type">number</span></div><div class="field-right">Display order within the session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">groupId</span><span class="field-type">string?</span></div><div class="field-right">Superset or circuit grouping. Null = standalone</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">groupType</span><span class="field-type">'superset' | 'circuit'?</span></div><div class="field-right">Required when groupId is set. Drives display labels in session log</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Per-exercise note</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">progressionIntent</span><span class="field-type">'up' | 'equal' | 'down'?</span></div><div class="field-right">User-declared readiness signal logged at session end, per exercise. Null = not logged. Optional — never forced. Surfaced in workout player at next session start alongside last session summary</div></div>
+<div class="field"><div class="field-left"><span class="field-name">sets</span><span class="field-type">SetLog[]</span></div><div class="field-right">All sets logged for this exercise</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">SetLog</span><span class="card-desc">one set within an exercise log</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">exerciseLogId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to ExerciseLog</div></div>
+<div class="field"><div class="field-left"><span class="field-name">setNumber</span><span class="field-type">number</span></div><div class="field-right">Display order within this exercise</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">setType</span><span class="field-type">SetType</span></div><div class="field-right">Classification only. Drives PR eligibility. normal | warmup | drop | failure</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">setDescriptor</span><span class="field-type">SetDescriptor?</span></div><div class="field-right">Optional execution note. slow_negative | partial | pause. Does not affect PR logic</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">setNote</span><span class="field-type">string?</span></div><div class="field-right">Free-text fallback for execution details not covered by setDescriptor</div></div>
+<div class="field"><div class="field-left"><span class="field-name">setMode</span><span class="field-type">'reps' | 'duration'</span></div><div class="field-right">Copied from Exercise.setMode</div></div>
+<div class="field"><div class="field-left"><span class="field-name">reps</span><span class="field-type">number?</span></div><div class="field-right">Active when setMode = reps</div></div>
+<div class="field"><div class="field-left"><span class="field-name">weightLbs</span><span class="field-type">number?</span></div><div class="field-right">Stored in lbs. Interpretation depends on Exercise.loadType</div></div>
+<div class="field"><div class="field-left"><span class="field-name">durationSeconds</span><span class="field-type">number?</span></div><div class="field-right">Active when setMode = duration</div></div>
+<div class="field"><div class="field-left"><span class="field-name">restSeconds</span><span class="field-type">number?</span></div><div class="field-right">Actual rest taken after this set</div></div>
+<div class="field"><div class="field-left"><span class="field-name">completedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Timestamp for live logging. Enables automatic rest timer</div></div>
+<div class="field"><div class="field-left"><span class="field-name">attributeValues</span><span class="field-type">Record&lt;string, any&gt;?</span></div><div class="field-right">Values for ExerciseAttributes keyed to ExerciseAttribute.key</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 5. CARDIO TEMPLATES -->
+<div class="domain">
+<div class="domain-label">5 &middot; Cardio Templates</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">CardioTemplate</span><span class="card-desc">saved reusable cardio plan</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string?</span></div><div class="field-right">"5K Interval Run", "Easy 45"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">CardioType</span></div><div class="field-right">Primary activity type. See seeded list session for subtypes per CardioType</div></div>
+<div class="field"><div class="field-left"><span class="field-name">subtype</span><span class="field-type">string?</span></div><div class="field-right">Seeded per CardioType. e.g. running: tempo | long_run | intervals | easy | race. See seeded list session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">color</span><span class="field-type">string?</span></div><div class="field-right">User-assigned hex</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultDurationMinutes</span><span class="field-type">number?</span></div><div class="field-right">Target duration pre-populated in session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">defaultDistanceMiles</span><span class="field-type">number?</span></div><div class="field-right">Target distance pre-populated in session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">segments</span><span class="field-type">CardioSegmentConfig[]</span></div><div class="field-right">Planned segment structure. Empty = unstructured</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">lastUsedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Updated each time a session starts from this template</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">CardioSegmentConfig</span><span class="card-desc">planned segment within a cardio template</span></div>
+<div class="field"><div class="field-left"><span class="field-name">order</span><span class="field-type">number</span></div><div class="field-right">Execution order</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">'warmup' | 'work' | 'recovery' | 'cooldown' | 'custom'</span></div><div class="field-right">Segment purpose</div></div>
+<div class="field"><div class="field-left"><span class="field-name">label</span><span class="field-type">string?</span></div><div class="field-right">"Interval 1", "Hill Sprint"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">durationMinutes</span><span class="field-type">number?</span></div><div class="field-right">Target duration for this segment</div></div>
+<div class="field"><div class="field-left"><span class="field-name">distanceMiles</span><span class="field-type">number?</span></div><div class="field-right">Target distance for this segment</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetRpe</span><span class="field-type">number?</span></div><div class="field-right">Target effort 1–10</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetHeartRate</span><span class="field-type">number?</span></div><div class="field-right">Target HR for this segment</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetCadence</span><span class="field-type">number?</span></div><div class="field-right">Target cadence for this segment</div></div>
+</div>
+</div>
+</div>
+
+
+<div class="entity-grid" style="margin-top:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">CardioSchedule</span><span class="card-desc">recurring cardio plan — generates planned CardioSession records</span><span class="card-new">new</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">templateId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to CardioTemplate. Defines what cardio activity is scheduled</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string?</span></div><div class="field-right">Optional override name. Falls back to template name</div></div>
+<div class="field"><div class="field-left"><span class="field-name">frequencyType</span><span class="field-type">WorkoutScheduleFrequency</span></div><div class="field-right">Reuses WorkoutScheduleFrequency enum: specific_days_of_week | every_n_days | every_n_weeks</div></div>
+<div class="field"><div class="field-left"><span class="field-name">daysOfWeek</span><span class="field-type">number[]?</span></div><div class="field-right">Used when frequencyType = specific_days_of_week. 0–6 (Sun–Sat)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">intervalDays</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = every_n_days. Minimum 1</div></div>
+<div class="field"><div class="field-left"><span class="field-name">intervalWeeks</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = every_n_weeks. Minimum 1</div></div>
+<div class="field"><div class="field-left"><span class="field-name">scheduledTime</span><span class="field-type">time string?</span></div><div class="field-right">Optional time of day for scheduled sessions. Enables relative reminders</div></div>
+<div class="field"><div class="field-left"><span class="field-name">startDate</span><span class="field-type">ISO date</span></div><div class="field-right">When the schedule becomes active</div></div>
+<div class="field"><div class="field-left"><span class="field-name">endDate</span><span class="field-type">ISO date?</span></div><div class="field-right">Optional. Null = open-ended recurring schedule</div></div>
+<div class="field"><div class="field-left"><span class="field-name">isActive</span><span class="field-type">boolean</span></div><div class="field-right">Default true. False = paused. Sessions already generated are unaffected</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete. Does not affect already-generated CardioSession records</div></div>
+</div>
+</div>
+</div>
+
+
+<div class="card">
+<div class="card-header"><span class="card-name">CardioSchedule rules</span><span class="card-desc">locked logic decisions — mirrors WorkoutSchedule rules</span></div>
+<div class="field"><div class="field-left"><span class="field-name">Session generation</span><span class="field-type">—</span></div><div class="field-right">Application generates planned CardioSession records from active CardioSchedules. Generation runs on app open looking ahead a configurable window (e.g. 4 weeks)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Status flow</span><span class="field-type">—</span></div><div class="field-right">Generated sessions start as status = planned. User starts → live → completed or skipped. Schedule is independent of session outcome</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Template changes</span><span class="field-type">—</span></div><div class="field-right">Changing a CardioTemplate does not retroactively alter already-generated sessions. New sessions pick up the updated template. templateNameSnapshot on session preserves historical display</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Deletion</span><span class="field-type">—</span></div><div class="field-right">Deleting a CardioSchedule soft-deletes it and stops future generation. Existing planned sessions are not automatically deleted — user clears manually if desired</div></div>
+</div>
+
+<!-- 6. CARDIO SESSIONS -->
+<div class="domain">
+<div class="domain-label">6 &middot; Cardio Sessions</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">CardioSession</span><span class="card-desc">a single cardio activity log</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">templateId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null for ad-hoc sessions</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">scheduleId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to CardioSchedule that generated this session. Null for ad-hoc sessions. Unique constraint on (scheduleId, scheduledDate) prevents duplicate generation</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">templateNameSnapshot</span><span class="field-type">string?</span></div><div class="field-right">Template name at time session was created. Preserved if template is later renamed or deleted</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">CardioType</span></div><div class="field-right">Primary activity type</div></div>
+<div class="field"><div class="field-left"><span class="field-name">subtype</span><span class="field-type">string?</span></div><div class="field-right">Activity qualifier. Seeded per CardioType</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">sportName</span><span class="field-type">string?</span></div><div class="field-right">Free-text sport name when type = sport. e.g. Basketball, Golf</div></div>
+<div class="field"><div class="field-left"><span class="field-name">status</span><span class="field-type">'planned' | 'live' | 'completed' | 'skipped'</span></div><div class="field-right">Mirrors WorkoutSession.status</div></div>
+<div class="field"><div class="field-left"><span class="field-name">scheduledDate</span><span class="field-type">ISO date?</span></div><div class="field-right">Calendar day anchor for planned sessions</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">scheduledTime</span><span class="field-type">time string?</span></div><div class="field-right">Optional. Enables relative reminders</div></div>
+<div class="field"><div class="field-left"><span class="field-name">startedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">System-set. Immutable after set</div></div>
+<div class="field"><div class="field-left"><span class="field-name">completedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">System-set. Immutable after set</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">When record entered the system. Always system-set</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">isRetroactive</span><span class="field-type">boolean</span></div><div class="field-right">True when logged after the fact. Default false</div></div>
+<div class="field"><div class="field-left"><span class="field-name">durationMinutes</span><span class="field-type">number?</span></div><div class="field-right">Total duration. User-overridable</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">durationOverridden</span><span class="field-type">boolean</span></div><div class="field-right">True when durationMinutes set by user. Default false</div></div>
+<div class="field"><div class="field-left"><span class="field-name">distanceMiles</span><span class="field-type">number?</span></div><div class="field-right">Total distance. Stored in miles</div></div>
+<div class="field"><div class="field-left"><span class="field-name">caloriesBurned</span><span class="field-type">number?</span></div><div class="field-right">Manual or device-imported</div></div>
+<div class="field"><div class="field-left"><span class="field-name">elevationGainFt</span><span class="field-type">number?</span></div><div class="field-right">Relevant for running, hiking, outdoor cycling</div></div>
+<div class="field"><div class="field-left"><span class="field-name">rpe</span><span class="field-type">number? (1–10)</span></div><div class="field-right">Overall effort</div></div>
+<div class="field"><div class="field-left"><span class="field-name">heartRateAvg / Max</span><span class="field-type">number?</span></div><div class="field-right">Device or manual entry</div></div>
+<div class="field"><div class="field-left"><span class="field-name">cadence</span><span class="field-type">number?</span></div><div class="field-right">Steps/min · RPM · strokes/min depending on type</div></div>
+<div class="field"><div class="field-left"><span class="field-name">resistance</span><span class="field-type">number? (1–10)</span></div><div class="field-right">Subjective scale</div></div>
+<div class="field"><div class="field-left"><span class="field-name">powerWatts</span><span class="field-type">number?</span></div><div class="field-right">Cycling only</div></div>
+<div class="field"><div class="field-left"><span class="field-name">route</span><span class="field-type">string?</span></div><div class="field-right">"Central Park loop", "Treadmill"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Free-text session note</div></div>
+<div class="field"><div class="field-left"><span class="field-name">segments</span><span class="field-type">CardioSegment[]</span></div><div class="field-right">Empty array if unstructured</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">CardioSegment</span><span class="card-desc">logged sub-interval within a cardio session</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">sessionId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to CardioSession</div></div>
+<div class="field"><div class="field-left"><span class="field-name">order</span><span class="field-type">number</span></div><div class="field-right">Execution order</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">'warmup' | 'work' | 'recovery' | 'cooldown' | 'custom'</span></div><div class="field-right">Segment classification</div></div>
+<div class="field"><div class="field-left"><span class="field-name">label</span><span class="field-type">string?</span></div><div class="field-right">"Interval 1", "Hill Sprint"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">durationMinutes</span><span class="field-type">number?</span></div><div class="field-right">Actual duration</div></div>
+<div class="field"><div class="field-left"><span class="field-name">distanceMiles</span><span class="field-type">number?</span></div><div class="field-right">Actual distance</div></div>
+<div class="field"><div class="field-left"><span class="field-name">heartRateAvg / Max</span><span class="field-type">number?</span></div><div class="field-right">Per-segment HR</div></div>
+<div class="field"><div class="field-left"><span class="field-name">cadence</span><span class="field-type">number?</span></div><div class="field-right">Per-segment cadence</div></div>
+<div class="field"><div class="field-left"><span class="field-name">resistance</span><span class="field-type">number?</span></div><div class="field-right">Per-segment resistance</div></div>
+<div class="field"><div class="field-left"><span class="field-name">powerWatts</span><span class="field-type">number?</span></div><div class="field-right">Per-segment power</div></div>
+<div class="field"><div class="field-left"><span class="field-name">rpe</span><span class="field-type">number?</span></div><div class="field-right">Per-segment effort</div></div>
+</div>
+</div>
+</div>
+
+<!-- 7. PERSONAL RECORDS -->
+<div class="domain">
+<div class="domain-label">7 &middot; Personal Records</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">PersonalRecord</span><span class="card-desc">best performance record — append only</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">exerciseId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Exercise. Null for cardio PRs</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">cardioType</span><span class="field-type">CardioType?</span></div><div class="field-right">Set for cardio PRs. Null for exercise PRs</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">PRType</span></div><div class="field-right">One exercise or cardio type can have multiple PR types simultaneously</div></div>
+<div class="field"><div class="field-left"><span class="field-name">value</span><span class="field-type">number</span></div><div class="field-right">Canonical value. Pace stored as seconds per mile for best_pace_at_distance</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">distance</span><span class="field-type">number?</span></div><div class="field-right">In miles. Required for best_pace_at_distance PRs. Null for all other types</div></div>
+<div class="field"><div class="field-left"><span class="field-name">secondaryValue</span><span class="field-type">number?</span></div><div class="field-right">For max_reps_at_weight: the weight at which reps were achieved</div></div>
+<div class="field"><div class="field-left"><span class="field-name">unit</span><span class="field-type">string</span></div><div class="field-right">"lbs", "reps", "seconds_per_mile"</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">source</span><span class="field-type">'auto_detected' | 'user_entered'</span></div><div class="field-right">auto_detected = system found during session completion · user_entered = manually seeded by user</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">celebrated</span><span class="field-type">boolean</span></div><div class="field-right">Default false. Set to true after in-app celebration plays on next app open</div></div>
+<div class="field"><div class="field-left"><span class="field-name">achievedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">When PR was set. User-provided for user_entered source. Null if date unknown</div></div>
+
+<div class="field field-new"><div class="field-left"><span class="field-name">workoutSessionId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to WorkoutSession that produced this PR. Populated for auto_detected workout PRs. Null for cardio PRs and user_entered PRs</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">cardioSessionId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to CardioSession that produced this PR. Populated for auto_detected cardio PRs. Null for workout PRs and user_entered PRs. Application enforces: exactly one populated for auto_detected, both null for user_entered</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">PR detection rules</span><span class="card-desc">locked logic decisions</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">Storage model</span><span class="field-type">append only</span></div><div class="field-right">Every PR is a new row. Current PR = best value. Full history preserved for progression charts</div></div>
+<div class="field"><div class="field-left"><span class="field-name">1RM formula</span><span class="field-type">Epley</span></div><div class="field-right">weight x (1 + reps / 30). Applied consistently. Never mix formulas</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Set filter</span><span class="field-type">normal sets only</span></div><div class="field-right">warmup, drop, and failure sets excluded from PR detection</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Assisted exercises</span><span class="field-type">inverted logic</span></div><div class="field-right">Lower assistance weight = better. PR detection uses minimum for assisted exercises</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Trigger</span><span class="field-type">on session complete</span></div><div class="field-right">PR scan runs when WorkoutSession or CardioSession status moves to completed</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">Cardio PR distance rule</span><span class="field-type">strict match only</span></div><div class="field-right">best_pace_at_distance PRs detected only when CardioSession.distanceMiles exactly matches a seeded or user-defined PR distance. No inference from longer sessions. No segment extraction in v1. Prevents questionable PRs from sessions of different distances</div></div>
+
+<div class="field"><div class="field-left"><span class="field-name">Goal check</span><span class="field-type">after PR write</span></div><div class="field-right">New PR triggers check against open ExerciseGoals for same exercise + type</div></div>
+<div class="field"><div class="field-left"><span class="field-name">user_entered PRs</span><span class="field-type">protected</span></div><div class="field-right">Auto-detection never overwrites a user_entered PR. New auto_detected PR supersedes by value only if higher</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Celebration</span><span class="field-type">deferred</span></div><div class="field-right">celebrated = false on write. Application checks on every app open and triggers animation. Sets celebrated = true immediately after</div></div>
+<div class="field"><div class="field-left"><span class="field-name">PR types by context</span><span class="field-type">—</span></div><div class="field-right">1rm / max_reps / max_reps_at_weight apply to workout exercises · best_pace_at_distance / longest_distance apply to cardio · max_duration applies to both</div></div>
+</div>
+</div>
+</div>
+
+<!-- 8. GOALS -->
+<div class="domain">
+<div class="domain-label">8 &middot; Goals</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">ExerciseGoal</span><span class="card-desc">performance target for one exercise</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">exerciseId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Exercise</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">PRType</span></div><div class="field-right">Mirrors PR types</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetValue</span><span class="field-type">number</span></div><div class="field-right">Stored in canonical units</div></div>
+<div class="field"><div class="field-left"><span class="field-name">unit</span><span class="field-type">string</span></div><div class="field-right">Mirrors PR.unit</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deadline</span><span class="field-type">ISO date?</span></div><div class="field-right">Optional. Drives urgency indicators</div></div>
+<div class="field"><div class="field-left"><span class="field-name">status</span><span class="field-type">'active' | 'achieved'</span></div><div class="field-right">achieved set automatically when PR meets targetValue</div></div>
+<div class="field"><div class="field-left"><span class="field-name">achievedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Null until goal is met</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">celebrated</span><span class="field-type">boolean</span></div><div class="field-right">Default false. Deferred celebration on next app open</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Enables "achieved in X days" stat</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete for abandoned goals</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">CardioGoal</span><span class="card-desc">performance target for a cardio activity</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">CardioType</span></div><div class="field-right">Activity this goal applies to</div></div>
+<div class="field"><div class="field-left"><span class="field-name">goalType</span><span class="field-type">'best_pace_at_distance' | 'longest_distance' | 'max_duration'</span></div><div class="field-right">Mirrors cardio PR types</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetValue</span><span class="field-type">number</span></div><div class="field-right">Pace in seconds per mile for best_pace_at_distance · miles for longest_distance · minutes for max_duration</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetDistance</span><span class="field-type">number?</span></div><div class="field-right">In miles. Required for best_pace_at_distance goals</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deadline</span><span class="field-type">ISO date?</span></div><div class="field-right">Optional target date</div></div>
+<div class="field"><div class="field-left"><span class="field-name">status</span><span class="field-type">'active' | 'achieved'</span></div><div class="field-right">Auto-set when goal conditions met</div></div>
+<div class="field"><div class="field-left"><span class="field-name">achievedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Null until achieved</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">celebrated</span><span class="field-type">boolean</span></div><div class="field-right">Default false. Deferred celebration on next app open</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete for abandoned goals</div></div>
+</div>
+</div>
+</div>
+
+<!-- 9. DAILY LOG -->
+<div class="domain">
+<div class="domain-label">9 &middot; Daily Log <span class="tag-new">new entity</span></div>
+<div class="entity-grid single">
+<div class="card">
+<div class="card-header"><span class="card-name">DailyLog</span><span class="card-desc">whole-day attributes — independent of fitness or habit activity</span><span class="card-new">new</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date <span class="badge badge-unique">unique</span></span></div><div class="field-right">Unique constraint on (userId, date). Resolved in user's local timezone</div></div>
+<div class="field"><div class="field-left"><span class="field-name">mood</span><span class="field-type">'great' | 'good' | 'okay' | 'bad' | 'terrible'?</span></div><div class="field-right">Whole-day mood. Surfaced from home calendar view regardless of fitness activity</div></div>
+<div class="field"><div class="field-left"><span class="field-name">energyLevel</span><span class="field-type">number? (1–5)</span></div><div class="field-right">Whole-day energy. Provides RPE context in trends</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">bodyweightLbs</span><span class="field-type">number?</span></div><div class="field-right">Optional weigh-in. Stored in lbs. Converted for display. Hidden option in UI — not a primary journal element</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">General daily note. Not fitness-specific</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">System-set on first write</div></div>
+<div class="field"><div class="field-left"><span class="field-name">updatedAt</span><span class="field-type">ISO string</span></div><div class="field-right">Last edit timestamp</div></div>
+</div>
+</div>
+</div>
+
+<!-- 10. JOURNAL -->
+<div class="domain">
+<div class="domain-label">10 &middot; Journal</div>
+<div class="entity-grid single">
+<div class="card">
+<div class="card-header"><span class="card-name">JournalEntry</span><span class="card-desc">fitness-specific diary entry per calendar day</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date <span class="badge badge-unique">unique</span></span></div><div class="field-right">Unique constraint on (userId, date). Resolved in user's local timezone</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Free-form fitness diary text. No length limit</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Auto-created when first workout completes or user opens journal</div></div>
+<div class="field"><div class="field-left"><span class="field-name">updatedAt</span><span class="field-type">ISO string</span></div><div class="field-right">Last edit. Supports retroactive note additions</div></div>
+</div>
+</div>
+</div>
+
+<!-- 11. HABITS -->
+<div class="domain">
+<div class="domain-label">11 &middot; Habits</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">Habit</span><span class="card-desc">identity and display settings — targets live in HabitTarget</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">parentHabitId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null = standalone habit. Populated = sub-step of parent. One level deep only — sub-steps cannot be parents</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string</span></div><div class="field-right">"Take creatine", "Read 20 minutes", "Morning Routine"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">description</span><span class="field-type">string?</span></div><div class="field-right">Optional clarifying note</div></div>
+<div class="field"><div class="field-left"><span class="field-name">category</span><span class="field-type">string?</span></div><div class="field-right">User-defined or seeded category. e.g. "Health", "Fitness", "Mindfulness"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">color</span><span class="field-type">string?</span></div><div class="field-right">User-assigned hex color for visual identification</div></div>
+<div class="field"><div class="field-left"><span class="field-name">icon</span><span class="field-type">string?</span></div><div class="field-right">Emoji or icon identifier</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">isHidden</span><span class="field-type">boolean</span></div><div class="field-right">Default false. Hidden habits excluded from overview screens and home cards. Accessible only from full habit list, ideally behind biometric auth</div></div>
+<div class="field"><div class="field-left"><span class="field-name">trackEffort</span><span class="field-type">boolean</span></div><div class="field-right">Default false. When true, prompts effort rating (1–5) after completion. Per-item opt-in</div></div>
+<div class="field"><div class="field-left"><span class="field-name">startDate</span><span class="field-type">ISO date</span></div><div class="field-right">When tracking begins. Streaks calculated from this date</div></div>
+<div class="field"><div class="field-left"><span class="field-name">allowMultiplePerDay</span><span class="field-type">boolean</span></div><div class="field-right">Applies to frequency-based habits (x_per_week, x_per_month, etc.). False = only first completion per day counts toward the period total. True = multiple completions in one day each count separately</div></div>
+<div class="field"><div class="field-left"><span class="field-name">displayOrder</span><span class="field-type">number</span></div><div class="field-right">User-defined sort order in daily view</div></div>
+<div class="field"><div class="field-left"><span class="field-name">isPinned</span><span class="field-type">boolean</span></div><div class="field-right">Pinned habits always show in overview without expanding</div></div>
+<div class="field"><div class="field-left"><span class="field-name">archivedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft archive. Hidden from daily view. History fully preserved</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">linkedTallyItemId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null = no tally link. When set, TallyLog.count and HabitLog.value are kept in sync by the application. Tally is the primary input surface. Only valid when habitType = 'measurable'. App enforces unit consistency between linked Habit and TallyItem at creation time</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+</div>
+<div class="col-stack">
+<div class="card">
+<div class="card-header"><span class="card-name">HabitTarget</span><span class="card-desc">versioned target — one row per phase</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Habit</div></div>
+<div class="field"><div class="field-left"><span class="field-name">frequencyType</span><span class="field-type">FrequencyType</span></div><div class="field-right">See FrequencyType enum in section 15</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">timesPerDay</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = x_per_day. Minimum 2 — use daily for once per day</div></div>
+<div class="field"><div class="field-left"><span class="field-name">intervalDays</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = every_n_days. Minimum 2 — 1 = daily</div></div>
+<div class="field"><div class="field-left"><span class="field-name">daysOfWeek</span><span class="field-type">number[]?</span></div><div class="field-right">Used when frequencyType = specific_days_of_week. 0–6 (Sun–Sat)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">timesPerWeek</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = x_per_week. Minimum 1, maximum 7</div></div>
+<div class="field"><div class="field-left"><span class="field-name">intervalWeeks</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = every_n_weeks. Minimum 2 — 1 = x_per_week</div></div>
+<div class="field"><div class="field-left"><span class="field-name">timesPerMonth</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = x_per_month. Minimum 1, maximum days in month</div></div>
+<div class="field"><div class="field-left"><span class="field-name">daysOfMonth</span><span class="field-type">number[]?</span></div><div class="field-right">Used when frequencyType = specific_days_of_month. e.g. [1, 15]</div></div>
+<div class="field"><div class="field-left"><span class="field-name">timesPerYear</span><span class="field-type">number?</span></div><div class="field-right">Used when frequencyType = annually. Minimum 1, maximum 365</div></div>
+<div class="field"><div class="field-left"><span class="field-name">scheduledTime</span><span class="field-type">time string?</span></div><div class="field-right">"08:00". Time-anchored habits slot into calendar view. Null = timeless, floats in list</div></div>
+<div class="field"><div class="field-left"><span class="field-name">weekStartDay</span><span class="field-type">0–6</span></div><div class="field-right">Week boundary for this target phase. Defaults to UserPreferences.weekStartDay</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitType</span><span class="field-type">'binary' | 'measurable'</span></div><div class="field-right">binary = checkbox · measurable = requires value input. User declares at creation — never inferred</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetValue</span><span class="field-type">number?</span></div><div class="field-right">For measurable habits only</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetUnit</span><span class="field-type">string?</span></div><div class="field-right">Seeded common units or free text. e.g. minutes, steps, oz, glasses, pages, reps</div></div>
+<div class="field"><div class="field-left"><span class="field-name">directionality</span><span class="field-type">'at_least' | 'at_most'?</span></div><div class="field-right">at_least = complete when value >= target · at_most = complete when value <= target</div></div>
+<div class="field"><div class="field-left"><span class="field-name">streakCompletionThreshold</span><span class="field-type">number?</span></div><div class="field-right">Absolute value in same unit as targetValue. Applies to measurable habits only — explicitly ignored for all frequency-based types. Null = full targetValue required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">autoCompleteThreshold</span><span class="field-type">number?</span></div><div class="field-right">Number of sub-steps required to auto-complete parent habit. Null = all sub-steps required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">effectiveFrom</span><span class="field-type">ISO date</span></div><div class="field-right">When this target phase begins. Active target = most recent effectiveFrom <= today</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+</div>
+</div>
+</div>
+
+<div class="entity-grid" style="margin-top:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">HabitLog</span><span class="card-desc">one completion record per habit per day</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Habit</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Denormalized for query efficiency</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date <span class="badge badge-unique">unique</span></span></div><div class="field-right">Unique constraint on (habitId, date)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">completed</span><span class="field-type">boolean</span></div><div class="field-right">Single source of truth for streak calculation. Sub-step logs inform but never override</div></div>
+<div class="field"><div class="field-left"><span class="field-name">value</span><span class="field-type">number?</span></div><div class="field-right">Logged value for measurable habits</div></div>
+<div class="field"><div class="field-left"><span class="field-name">effortRating</span><span class="field-type">number? (1–5)</span></div><div class="field-right">Null if Habit.trackEffort = false or user skipped prompt</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Optional per-completion note</div></div>
+<div class="field"><div class="field-left"><span class="field-name">completedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Completion timestamp. Null if retroactively logged</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">HabitStreakPause</span><span class="card-desc">user-initiated streak suspension</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null = global pause across all habits. Populated = per-habit pause</div></div>
+<div class="field"><div class="field-left"><span class="field-name">startDate</span><span class="field-type">ISO date</span></div><div class="field-right">First paused day. Retroactive up to 30 days before createdAt</div></div>
+<div class="field"><div class="field-left"><span class="field-name">endDate</span><span class="field-type">ISO date?</span></div><div class="field-right">Null = ongoing. Set when user ends the pause</div></div>
+<div class="field"><div class="field-left"><span class="field-name">reasons</span><span class="field-type">string[]?</span></div><div class="field-right">Multi-select from seeded checklist. e.g. ["vacation", "illness"]. See seeded list session</div></div>
+<div class="field"><div class="field-left"><span class="field-name">reasonNote</span><span class="field-type">string?</span></div><div class="field-right">Free-form text for "other" or additional context</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Retroactive window = createdAt minus 30 days. Streak recalculates from HabitLog + pause records at query time — no DB rollback required</div></div>
+</div>
+</div>
+
+<div class="entity-grid" style="margin-top:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">HabitPeriodTarget</span><span class="card-desc">aggregate consistency target — distinct from streak</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Habit. Sits alongside HabitTarget</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Denormalized for query efficiency. Avoids join through Habit for user-level queries</div></div>
+<div class="field"><div class="field-left"><span class="field-name">period</span><span class="field-type">'week' | 'month' | 'year'</span></div><div class="field-right">Aggregation window</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetType</span><span class="field-type">'completion_count' | 'aggregate_value'</span></div><div class="field-right">completion_count = X days completed · aggregate_value = sum of logged values</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetValue</span><span class="field-type">number</span></div><div class="field-right">e.g. 25 days completed or 20 miles run this week</div></div>
+<div class="field"><div class="field-left"><span class="field-name">effectiveFrom</span><span class="field-type">ISO date</span></div><div class="field-right">Versioned like HabitTarget</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">Streak calculation rules</span><span class="card-desc">locked logic decisions</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">daily</span><span class="field-type">—</span></div><div class="field-right">Streak = consecutive calendar days completed. Breaks on any missed day</div></div>
+<div class="field"><div class="field-left"><span class="field-name">specific_days_of_week</span><span class="field-type">—</span></div><div class="field-right">Streak = consecutive scheduled days completed. Unscheduled days ignored</div></div>
+<div class="field"><div class="field-left"><span class="field-name">x_per_week</span><span class="field-type">—</span></div><div class="field-right">Streak = consecutive full weeks where timesPerWeek was met. Absolute — no threshold. Never breaks mid-week</div></div>
+<div class="field"><div class="field-left"><span class="field-name">x_per_month</span><span class="field-type">—</span></div><div class="field-right">Streak = consecutive full months where timesPerMonth was met. Absolute — no threshold. Never breaks mid-month</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Streak unit</span><span class="field-type">—</span></div><div class="field-right">daily/specific_days count completed events · x_per_week counts weeks · x_per_month counts months</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Partial first period</span><span class="field-type">—</span></div><div class="field-right">Ignored for x_per_week and x_per_month. Streak starts at second full period</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Paused dates</span><span class="field-type">—</span></div><div class="field-right">Excluded from streak calculation. No grace period — user is responsible for pausing honestly</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Retroactive pause</span><span class="field-type">—</span></div><div class="field-right">Allowed up to 30 days back. Streak recalculates from HabitLog + HabitStreakPause records at query time. No DB rollback required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Historical eval</span><span class="field-type">—</span></div><div class="field-right">Past completion evaluated against HabitTarget active on that date, not current target</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Streak threshold</span><span class="field-type">—</span></div><div class="field-right">For measurable habits only: uses streakCompletionThreshold if set, otherwise full targetValue required. Never applies to frequency-based types</div></div>
+</div>
+</div>
+</div>
+
+<!-- 12. NUTRITION & MEDS -->
+<div class="domain">
+<div class="domain-label">12 &middot; Nutrition &amp; Meds</div>
+<div class="entity-grid" style="margin-bottom:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">NutritionMetric</span><span class="card-desc">definition of a trackable nutrition value</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string? <span class="badge badge-fk">FK</span></span></div><div class="field-right">Null = seeded built-in. Populated = user-created custom metric</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string</span></div><div class="field-right">"Calories", "Protein", "Fiber", "Cholesterol"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">unit</span><span class="field-type">string</span></div><div class="field-right">"kcal", "g", "mg". Locked for seeded metrics. User-defined free text for custom metrics</div></div>
+<div class="field"><div class="field-left"><span class="field-name">isSeeded</span><span class="field-type">boolean</span></div><div class="field-right">True = built-in read-only. False = user-created editable and deletable</div></div>
+<div class="field"><div class="field-left"><span class="field-name">displayOrder</span><span class="field-type">number</span></div><div class="field-right">Sort order in logging UI</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete for custom metrics only. Seeded metrics are never deleted</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">NutritionTarget</span><span class="card-desc">per-metric daily target — versioned · weekly targets deferred to v2</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">metricId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to NutritionMetric. One target row per metric</div></div>
+<div class="field"><div class="field-left"><span class="field-name">targetValue</span><span class="field-type">number</span></div><div class="field-right">Daily target in metric's unit</div></div>
+<div class="field"><div class="field-left"><span class="field-name">effectiveFrom</span><span class="field-type">ISO date</span></div><div class="field-right">Versioned. Active target = most recent effectiveFrom <= today</div></div>
+<div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">Creation timestamp</div></div>
+</div>
+</div>
+<div class="entity-grid" style="margin-bottom:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">NutritionLog</span><span class="card-desc">daily nutrition log header</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date <span class="badge badge-unique">unique</span></span></div><div class="field-right">Unique constraint on (userId, date). One log per day</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Optional daily note</div></div>
+<div class="field"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">First entry timestamp</div></div>
+<div class="field"><div class="field-left"><span class="field-name">updatedAt</span><span class="field-type">ISO string</span></div><div class="field-right">Last edit timestamp</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">NutritionLogEntry</span><span class="card-desc">one metric value within a daily log</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">nutritionLogId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to NutritionLog</div></div>
+<div class="field"><div class="field-left"><span class="field-name">metricId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to NutritionMetric</div></div>
+<div class="field"><div class="field-left"><span class="field-name">value</span><span class="field-type">number</span></div><div class="field-right">Logged value in metric's canonical unit</div></div>
+</div>
+</div>
+<div class="entity-grid" style="margin-bottom:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">SavedFood</span><span class="card-desc">user-created reusable food entry</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string</span></div><div class="field-right">"Eggs — 3", "Chicken breast 150g"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">metricValues</span><span class="field-type">SavedFoodMetric[]</span></div><div class="field-right">Nutritional values per metric</div></div>
+<div class="field"><div class="field-left"><span class="field-name">displayOrder</span><span class="field-type">number</span></div><div class="field-right">User-defined sort order</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">servingSize</span><span class="field-type">number</span></div><div class="field-right">Size of one serving. e.g. 150 for 150g chicken breast</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">servingUnit</span><span class="field-type">string</span></div><div class="field-right">Unit for servingSize. e.g. g, oz, ml, cup, piece. Free text</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">defaultQuantity</span><span class="field-type">number</span></div><div class="field-right">Default number of servings to pre-fill when logging. e.g. 1.0. User adjusts at log time</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">brand</span><span class="field-type">string?</span></div><div class="field-right">Optional brand name. Added for forward compatibility — deferred to v2 for UI</div></div>
+<div class="field"><div class="field-left"><span class="field-name">lastUsedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Drives recency sort in quick-add picker</div></div>
+<div class="field"><div class="field-left"><span class="field-name">deletedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft delete</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">SavedFoodMetric</span><span class="card-desc">one metric value for a saved food</span></div>
+<div class="field"><div class="field-left"><span class="field-name">savedFoodId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to SavedFood</div></div>
+<div class="field"><div class="field-left"><span class="field-name">metricId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to NutritionMetric</div></div>
+<div class="field"><div class="field-left"><span class="field-name">value</span><span class="field-type">number</span></div><div class="field-right">Value in metric's canonical unit</div></div>
+</div>
+</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">Medication</span><span class="card-desc">a supplement or medication the user tracks</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string</span></div><div class="field-right">"Vitamin D", "Omega 3", "Metformin"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">dose</span><span class="field-type">number?</span></div><div class="field-right">Numeric dose amount</div></div>
+<div class="field"><div class="field-left"><span class="field-name">doseUnit</span><span class="field-type">string?</span></div><div class="field-right">"mg", "mcg", "IU", "ml"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">notes</span><span class="field-type">string?</span></div><div class="field-right">Optional instructions or context</div></div>
+<div class="field"><div class="field-left"><span class="field-name">color</span><span class="field-type">string?</span></div><div class="field-right">User-assigned hex</div></div>
+<div class="field"><div class="field-left"><span class="field-name">icon</span><span class="field-type">string?</span></div><div class="field-right">Emoji or icon identifier</div></div>
+<div class="field"><div class="field-left"><span class="field-name">displayOrder</span><span class="field-type">number</span></div><div class="field-right">User-defined sort order</div></div>
+<div class="field"><div class="field-left"><span class="field-name">archivedAt</span><span class="field-type">ISO string?</span></div><div class="field field-new"><div class="field-left"><span class="field-name">totalDosesPerDay</span><span class="field-type">number</span></div><div class="field-right">Default 1. Drives how many MedicationLog rows are expected per day. Application generates doseNumber 1..totalDosesPerDay for compliance tracking</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">doseTimes</span><span class="field-type">time[]?</span></div><div class="field-right">Scheduled time for each dose. Index maps to doseNumber — doseTimes[0] = dose 1, doseTimes[1] = dose 2. e.g. ["08:00","20:00"]. Null = no scheduled times. Length should equal totalDosesPerDay when set</div></div>
+
+<div class="field-right">Soft archive. History preserved</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">MedicationLog</span><span class="card-desc">daily compliance record per medication</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Denormalized for query efficiency</div></div>
+<div class="field"><div class="field-left"><span class="field-name">medicationId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to Medication</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date</span></div><div class="field-right">Calendar day anchor</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">doseNumber</span><span class="field-type">number</span></div><div class="field-right">Which dose of the day this is. 1-indexed. Unique constraint on (medicationId, date, doseNumber). Supports multiple doses per day</div></div>
+<div class="field"><div class="field-left"><span class="field-name">taken</span><span class="field-type">boolean</span></div><div class="field-right">Compliance record for this dose</div></div>
+<span class="field-type">boolean</span></div><div class="field-right">Compliance record for this day</div></div>
+<div class="field"><div class="field-left"><span class="field-name">takenAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Timestamp. Null if retroactively logged</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Optional per-dose note</div></div>
+</div>
+</div>
+</div>
+
+
+<div class="entity-grid" style="margin-top:16px;">
+<div class="card">
+<div class="card-header"><span class="card-name">NutritionFoodLogEntry</span><span class="card-desc">log a SavedFood by quantity — calculates and writes to NutritionLogEntry</span><span class="card-new">new</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">nutritionLogId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to NutritionLog</div></div>
+<div class="field"><div class="field-left"><span class="field-name">savedFoodId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to SavedFood</div></div>
+<div class="field"><div class="field-left"><span class="field-name">quantity</span><span class="field-type">number</span></div><div class="field-right">Number of servings logged. e.g. 2.0 = two servings of the saved food</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">savedFoodNameSnapshot</span><span class="field-type">string</span></div><div class="field-right">SavedFood name at time of logging. Preserved if food is later renamed or deleted</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">savedFoodMetricsSnapshot</span><span class="field-type">Record&lt;string, number&gt;</span></div><div class="field-right">Per-metric values at time of logging (per serving). Preserved if food's nutritional values are later edited. Application multiplies by quantity and writes to NutritionLogEntry</div></div>
+<div class="field"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">When this food entry was logged</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">NutritionFoodLogEntry rules</span><span class="card-desc">locked logic decisions</span></div>
+<div class="field"><div class="field-left"><span class="field-name">Write flow</span><span class="field-type">—</span></div><div class="field-right">On creation: quantity × savedFoodMetricsSnapshot values → written as NutritionLogEntry rows. NutritionLogEntry is the single source of truth for daily totals. NutritionFoodLogEntry is the audit trail showing how totals were composed</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Editing</span><span class="field-type">—</span></div><div class="field-right">Editing quantity recalculates and updates the corresponding NutritionLogEntry rows. Uses snapshot values not current SavedFood values to preserve edit-time accuracy</div></div>
+<div class="field"><div class="field-left"><span class="field-name">Deletion</span><span class="field-type">—</span></div><div class="field-right">Deleting a NutritionFoodLogEntry removes its corresponding NutritionLogEntry rows</div></div>
+</div>
+</div>
+</div>
+
+<!-- 13. TALLY -->
+<div class="domain">
+<div class="domain-label">13 &middot; Tally</div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">TallyItem</span><span class="card-desc">a thing the user wants to count</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">name</span><span class="field-type">string</span></div><div class="field-right">"Steps", "Glasses of water", "Alcoholic drinks"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">unit</span><span class="field-type">string?</span></div><div class="field-right">"oz", "reps", "instances". Null = unitless count</div></div>
+<div class="field"><div class="field-left"><span class="field-name">directionality</span><span class="field-type">'increase' | 'decrease'?</span></div><div class="field-right">User intent for trend context only. No enforcement or pass/fail logic</div></div>
+<div class="field"><div class="field-left"><span class="field-name">resetFrequency</span><span class="field-type">'daily' | 'weekly' | 'never'</span></div><div class="field-right">When count resets. never = cumulative running total</div></div>
+<div class="field"><div class="field-left"><span class="field-name">color</span><span class="field-type">string?</span></div><div class="field-right">User-assigned hex</div></div>
+<div class="field"><div class="field-left"><span class="field-name">icon</span><span class="field-type">string?</span></div><div class="field-right">Emoji or icon identifier</div></div>
+<div class="field"><div class="field-left"><span class="field-name">displayOrder</span><span class="field-type">number</span></div><div class="field-right">User-defined sort order</div></div>
+<div class="field"><div class="field-left"><span class="field-name">archivedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Soft archive. History preserved</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">TallyLog</span><span class="card-desc">count record per item per date</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Denormalized for query efficiency</div></div>
+<div class="field"><div class="field-left"><span class="field-name">tallyItemId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">FK to TallyItem</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">periodStartDate</span><span class="field-type">ISO date <span class="badge badge-unique">unique</span></span></div><div class="field-right">Anchors the period. For daily: equals the calendar date. For weekly: equals the week start date per UserPreferences.weekStartDay. For never-reset: equals TallyItem.createdAt date. Unique constraint on (tallyItemId, periodStartDate)</div></div>
+<div class="field"><div class="field-left"><span class="field-name">periodEndDate</span><span class="field-type">ISO date</span></div><div class="field-right">Last day of the period. For daily: same as periodStartDate. For weekly: periodStartDate + 6. For never-reset: null or far-future sentinel. Stored for display — e.g. show week May 4–10 without calculating on the fly</div></div>
+<div class="field"><div class="field-left"><span class="field-name">count</span><span class="field-type">number</span></div><div class="field-right">Total count for this period. Application increments in place on each tap — not appended</div></div>
+<div class="field"><div class="field-left"><span class="field-name">updatedAt</span><span class="field-type">ISO string</span></div><div class="field-right">Last update timestamp</div></div>
+</div>
+</div>
+</div>
+
+<!-- 14. NOTIFICATIONS -->
+<div class="domain">
+<div class="domain-label">14 &middot; Notifications</div>
+<div class="entity-grid single">
+<div class="card">
+<div class="card-header"><span class="card-name">NotificationSettings</span><span class="card-desc">per-user notification preferences</span><span class="card-updated">updated</span></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span> <span class="badge badge-unique">unique</span></span></div><div class="field-right">1:1 with User</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">pushToken</span><span class="field-type">string?</span></div><div class="field-right">Device push notification token. Updated on app open. Null = push not registered or permission denied</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">permissionStatus</span><span class="field-type">'granted' | 'denied' | 'not_determined'</span></div><div class="field-right">Device-level notification permission state. Updated on app open and after permission prompts</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">quietHoursStart</span><span class="field-type">time string?</span></div><div class="field-right">"22:00". No notifications fire during quiet hours. Null = no quiet hours. Applied after masterEnabled check</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">quietHoursEnd</span><span class="field-type">time string?</span></div><div class="field-right">"07:00". End of quiet hours window. Null = no quiet hours</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">scheduledNotificationIds</span><span class="field-type">Record&lt;string, string&gt;?</span></div><div class="field-right">Map of notification type to device-assigned scheduled notification ID. Used for cancellation when settings change. e.g. {habitDailyReminder: device-id-123}</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">lastWeeklyDigestSentAt</span><span class="field-type">ISO string?</span></div><div class="field-right">Timestamp of last weekly digest notification. Prevents duplicate sends across app opens</div></div>
+<div class="field"><div class="field-left"><span class="field-name">masterEnabled</span><span class="field-type">boolean</span></div><div class="field-right">Master circuit breaker. When false, no notifications fire regardless of individual settings</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitDailyReminder</span><span class="field-type">boolean</span></div><div class="field-right">Daily prompt to check habits</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitReminderTime</span><span class="field-type">time string?</span></div><div class="field-right">"08:00". Null = no daily reminder</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitStreakAtRisk</span><span class="field-type">boolean</span></div><div class="field-right">Same-day warning when a streak is at risk of breaking</div></div>
+<div class="field"><div class="field-left"><span class="field-name">habitStreakBroken</span><span class="field-type">boolean</span></div><div class="field-right">Post-break notification</div></div>
+<div class="field"><div class="field-left"><span class="field-name">workoutReminder</span><span class="field-type">boolean</span></div><div class="field-right">Reminder for planned workouts</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">workoutReminderType</span><span class="field-type">'fixed_time' | 'relative'</span></div><div class="field-right">fixed_time = fires at workoutReminderTime daily · relative = fires workoutReminderMinutesBefore the scheduledTime on WorkoutSession. Falls back to fixed_time if scheduledTime is null</div></div>
+<div class="field field-changed"><div class="field-left"><span class="field-name">workoutReminderTime</span><span class="field-type">time string?</span></div><div class="field-right">"07:00". Used when workoutReminderType = fixed_time. Null = no reminder</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">workoutReminderMinutesBefore</span><span class="field-type">number?</span></div><div class="field-right">Used when workoutReminderType = relative. e.g. 120 = notify 2 hours before scheduled workout</div></div>
+<div class="field"><div class="field-left"><span class="field-name">medicationReminder</span><span class="field-type">boolean</span></div><div class="field-right">Enables per-medication reminders. Scheduling handled at Medication level</div></div>
+<div class="field"><div class="field-left"><span class="field-name">medicationMissed</span><span class="field-type">boolean</span></div><div class="field-right">End-of-day alert when one or more medications not marked taken</div></div>
+<div class="field"><div class="field-left"><span class="field-name">weeklyDigest</span><span class="field-type">boolean</span></div><div class="field-right">Weekly summary notification. Fires on last day of user's week</div></div>
+</div>
+</div>
+</div>
+
+<!-- 15. ENUMS -->
+<div class="domain">
+<div class="domain-label">15 &middot; Enums Reference</div>
+<div class="entity-grid triple">
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">CardioType</span><span style="font-size:9px;font-weight:700;background:#fffbeb;color:#92400e;padding:1px 6px;border-radius:4px;">updated</span></div>
+<div class="enum-values">
+<span class="enum-val">running</span><span class="enum-val">cycling</span><span class="enum-val">rowing</span><span class="enum-val">swimming</span><span class="enum-val">elliptical</span><span class="enum-val">stair_climber</span><span class="enum-val">hiking</span><span class="enum-val">walking</span><span class="enum-val">jump_rope</span><span class="enum-val enum-val-new">hiit</span><span class="enum-val enum-val-new">sport</span><span class="enum-val">other</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">SetType</span><span style="font-size:9px;font-weight:700;background:#fffbeb;color:#92400e;padding:1px 6px;border-radius:4px;">updated</span></div>
+<div class="enum-values">
+<span class="enum-val">normal</span><span class="enum-val">warmup</span><span class="enum-val">drop</span><span class="enum-val">failure</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">SetDescriptor</span><span style="font-size:9px;font-weight:700;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;">new</span></div>
+<div class="enum-values">
+<span class="enum-val enum-val-new">slow_negative</span><span class="enum-val enum-val-new">partial</span><span class="enum-val enum-val-new">pause</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">LoadType</span></div>
+<div class="enum-values">
+<span class="enum-val">weighted</span><span class="enum-val">bodyweight</span><span class="enum-val">assisted</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">AppMode</span></div>
+<div class="enum-values">
+<span class="enum-val">fitness_only</span><span class="enum-val">habits_only</span><span class="enum-val">combined</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">PRType</span><span style="font-size:9px;font-weight:700;background:#fffbeb;color:#92400e;padding:1px 6px;border-radius:4px;">updated</span></div>
+<div class="enum-values">
+<span class="enum-val">1rm</span><span class="enum-val">max_reps</span><span class="enum-val enum-val-new">max_reps_at_weight</span><span class="enum-val enum-val-new">best_pace_at_distance</span><span class="enum-val enum-val-changed">longest_distance</span><span class="enum-val">max_duration</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">FrequencyType</span></div>
+<div class="enum-values">
+<span class="enum-val">daily</span><span class="enum-val">x_per_day</span><span class="enum-val">every_n_days</span><span class="enum-val">specific_days_of_week</span><span class="enum-val">x_per_week</span><span class="enum-val">every_n_weeks</span><span class="enum-val">x_per_month</span><span class="enum-val">specific_days_of_month</span><span class="enum-val">annually</span>
+</div></div>
+
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">WorkoutScheduleFrequency</span><span style="font-size:9px;font-weight:700;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;">new</span></div>
+<div class="enum-values">
+<span class="enum-val enum-val-new">specific_days_of_week</span>
+<span class="enum-val enum-val-new">every_n_days</span>
+<span class="enum-val enum-val-new">every_n_weeks</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">GoalType</span><span style="font-size:9px;font-weight:700;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;">new</span></div>
+<div class="enum-values">
+<span class="enum-val enum-val-new">lose_weight</span><span class="enum-val enum-val-new">build_muscle</span><span class="enum-val enum-val-new">improve_endurance</span><span class="enum-val enum-val-new">general_fitness</span><span class="enum-val enum-val-new">build_habit</span><span class="enum-val enum-val-new">mental_wellness</span><span class="enum-val enum-val-new">sport_performance</span>
+</div></div>
+
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">BodyMetricType</span><span style="font-size:9px;font-weight:700;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;">new</span></div>
+<div class="enum-values">
+<span class="enum-val enum-val-new">body_fat_pct</span><span class="enum-val enum-val-new">chest_cm</span><span class="enum-val enum-val-new">waist_cm</span><span class="enum-val enum-val-new">hips_cm</span><span class="enum-val enum-val-new">bicep_cm</span><span class="enum-val enum-val-new">thigh_cm</span><span class="enum-val enum-val-new">neck_cm</span><span class="enum-val enum-val-new">shoulder_cm</span><span class="enum-val enum-val-new">calf_cm</span><span class="enum-val enum-val-new">resting_heart_rate</span><span class="enum-val enum-val-new">blood_pressure_systolic</span><span class="enum-val enum-val-new">blood_pressure_diastolic</span><span class="enum-val enum-val-new">vo2_max</span>
+</div></div>
+
+</div>
+
+<div class="decisions" style="margin-top:16px;">
+<div class="decisions-header">Canonical storage rules — never deviate from these</div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Medication compliance</div></div><div class="decision-right">MedicationLog is unique on (medicationId, date, doseNumber). totalDosesPerDay on Medication defines how many doses are expected. Compliance = all doseNumber rows for that date are marked taken</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Workout scheduling</div></div><div class="decision-right">WorkoutSchedule generates planned WorkoutSession records. Application looks ahead a configurable window on app open. Template changes do not retroactively alter already-generated sessions. templateNameSnapshot preserves display</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Snapshot fields</div></div><div class="decision-right">ExerciseLog stores exerciseNameSnapshot, exerciseSetModeSnapshot, exerciseLoadTypeSnapshot, exerciseAttributesSnapshot at log time. WorkoutSession and CardioSession store templateNameSnapshot. Snapshots are write-once — never updated after creation</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Polymorphic FK policy</div></div><div class="decision-right">No polymorphic FKs. PersonalRecord uses workoutSessionId and cardioSessionId as separate nullable fields. ExerciseLog.sessionId is required and always references WorkoutSession</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Tally periods</div></div><div class="decision-right">TallyLog unique on (tallyItemId, periodStartDate). For daily: periodStartDate = date. For weekly: periodStartDate = week start per UserPreferences.weekStartDay. For never-reset: periodStartDate = TallyItem.createdAt date. Running total = sum of all rows. Current period = row where periodStartDate = current period anchor</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Food logging flow</div></div><div class="decision-right">NutritionFoodLogEntry is the audit trail — it records what SavedFood was logged at what quantity. Application multiplies quantity by savedFoodMetricsSnapshot and writes to NutritionLogEntry rows. NutritionLogEntry is the single source of truth for daily totals</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Weight</div></div><div class="decision-right">Always stored in lbs. Converted to kg at display layer only</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Distance</div></div><div class="decision-right">Always stored in miles. Converted to km at display layer only</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Height</div></div><div class="decision-right">Always stored in cm. Converted for display</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Duration</div></div><div class="decision-right">Always stored in seconds (SetLog) or minutes (sessions). Never mix within an entity</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Pace</div></div><div class="decision-right">Always stored as seconds per mile. Formatted to min/mile or min/km at display layer per UserPreferences.distanceUnit. Never store as formatted string</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Dates</div></div><div class="decision-right">Calendar dates (ISO date "2026-04-29") for day anchors. ISO datetime strings for timestamps. All resolved in User.timezone</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Age</div></div><div class="decision-right">Never stored. Always derived from UserPreferences.dateOfBirth at query time</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Colors</div></div><div class="decision-right">Status colors (complete, missed, pending) are theme tokens only — never stored in DB. User-assigned colors stored as hex strings on Habit, Medication, TallyItem, WorkoutTemplate, CardioTemplate</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Seeded data</div></div><div class="decision-right">Seeded records are read-only. Users may add custom records alongside but never modify or delete seeded entries. Identified by isSeeded = true and userId = null</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Timestamps</div></div><div class="decision-right">System-generated timestamps (startedAt, completedAt, loggedAt) are immutable after being set. durationMinutes is the user-overridable field. completedAt is never user-editable</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Derived values</div></div><div class="decision-right">Never store a value derivable from other stored values without a compelling performance reason. durationMinutes is the exception — directly overridable with durationOverridden flag to track state</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Mode switches</div></div><div class="decision-right">AppMode changes are non-destructive. Data surfaces and unsurfaces based on mode. No fresh starts unless user explicitly triggers a reset</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Celebrations</div></div><div class="decision-right">PR and goal celebrations use deferred in-app pattern. celebrated = false on write. Application checks on every app open, triggers animation, sets celebrated = true. No push notifications for achievements</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Cascading defaults</div></div><div class="decision-right">ExerciseConfig value overrides UserPreferences global default, which overrides hardcoded app fallback. Resolution order: ExerciseConfig.defaultReps/Sets/Rest → UserPreferences.defaultReps/Sets/defaultRestSeconds → app fallback. Applies to reps, sets, and rest timer defaults</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Frequency validation</div></div><div class="decision-right">timesPerDay min 2 · timesPerWeek 1–7 · timesPerMonth 1–days in month · timesPerYear 1–365 · intervalDays min 2 · intervalWeeks min 2. Enforced at application layer</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Streak thresholds</div></div><div class="decision-right">streakCompletionThreshold applies to measurable habits only. Explicitly ignored for all frequency-based types. x_per_week and x_per_month streaks are absolute — no partial credit</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Sport logging</div></div><div class="decision-right">Sports log as CardioSessions with type = sport and free-text sportName field. No separate exercise category for sport</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Body metrics storage</div></div><div class="decision-right">BodyMetric is append-only — one row per metric type per date per user. Current value = most recent row for that type. Full history preserved for trend charts. Blood pressure stored as two separate rows: blood_pressure_systolic and blood_pressure_diastolic on the same date. Never derive one from the other</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Body metric units</div></div><div class="decision-right">All measurements stored in metric units (cm, %). Converted at display layer per user preference. body_fat_pct stored as a decimal 0–100. resting_heart_rate in bpm. vo2_max in ml/kg/min. blood_pressure values in mmHg. Never store display-formatted strings</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Progress photos</div></div><div class="decision-right">ProgressPhoto stores a reference (URI or file path) to the photo — never raw binary data in the DB. Photos stored in device-local or cloud storage. Multiple photos per date are allowed. Deletion is permanent — no soft delete. User owns and controls all photo data</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Habit–Tally sync</div></div><div class="decision-right">When Habit.linkedTallyItemId is set, TallyLog.count and HabitLog.value represent the same number and are kept in sync by the application. Tally is the primary input surface — writes to TallyLog propagate to HabitLog.value, and writes to HabitLog.value propagate to TallyLog.count. Only valid for measurable habits (habitType = 'measurable'). App enforces unit consistency between the linked Habit and TallyItem at creation time. Linking a binary habit to a TallyItem is not permitted</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Day boundary</div></div><div class="decision-right">UserPreferences.dayEndTime defines when the user's day ends. Default "00:00" (midnight), configurable up to "04:00". Activity logged between midnight and dayEndTime counts toward the previous calendar date. Storage always uses the actual calendar date — the offset is applied only at the display and streak calculation layer. No schema changes required on log entities</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Progression intent</div></div><div class="decision-right">ExerciseLog.progressionIntent is user-declared at session end, per exercise. It is optional and never system-derived. The workout player queries the most recent completed ExerciseLog for a given exerciseId (normal sets only) at session start and surfaces progressionIntent alongside the last session summary (e.g. "3 sets · 140/140/130 lb · May 1 ↑"). Null = user did not log a signal for that exercise that session</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Retroactive window</div></div><div class="decision-right">All retroactive entry is capped at 3 calendar days from the end of the current day (dayEndTime). For WorkoutSession and CardioSession, the window is evaluated against workoutDate. For HabitLog, MedicationLog, and DailyLog, the window is evaluated against date. Enforced at the application layer. Dates outside the window are not selectable in any date picker — an inline explanation is shown to the user</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Session completedAt timing</div></div><div class="decision-right">WorkoutSession.completedAt is set when the user taps Save on the session summary modal, not when End Session is tapped. End Session opens the summary but does not write completedAt or change status to completed. The session remains status = live until Save fires on the summary</div></div>
+</div>
+</div>
+
+<!-- 16. BODY METRICS -->
+<div class="domain">
+<div class="domain-label">16 &middot; Body Metrics <span class="tag-new">new section</span></div>
+<div class="entity-grid">
+<div class="card">
+<div class="card-header"><span class="card-name">BodyMetric</span><span class="card-desc">single body composition measurement — append only</span><span class="card-new">new</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date</span></div><div class="field-right">Calendar day of measurement. Resolved in user's local timezone. Multiple metric types can share the same date</div></div>
+<div class="field"><div class="field-left"><span class="field-name">type</span><span class="field-type">BodyMetricType</span></div><div class="field-right">What is being measured. See BodyMetricType enum in section 15. Blood pressure requires two rows — systolic and diastolic</div></div>
+<div class="field"><div class="field-left"><span class="field-name">value</span><span class="field-type">number</span></div><div class="field-right">Measurement value in canonical unit for that type. body_fat_pct = 0–100 · measurements = cm · resting_heart_rate = bpm · vo2_max = ml/kg/min · blood_pressure = mmHg</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Optional context. e.g. "morning fasted", "post-cut"</div></div>
+<div class="field"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">System-set when record is created. Immutable</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-name">ProgressPhoto</span><span class="card-desc">timestamped body photo reference</span><span class="card-new">new</span></div>
+<div class="field"><div class="field-left"><span class="field-name">id</span><span class="field-type">string <span class="badge badge-pk">PK</span></span></div><div class="field-right">Primary key</div></div>
+<div class="field"><div class="field-left"><span class="field-name">userId</span><span class="field-type">string <span class="badge badge-fk">FK</span></span></div><div class="field-right">Required</div></div>
+<div class="field"><div class="field-left"><span class="field-name">date</span><span class="field-type">ISO date</span></div><div class="field-right">Calendar day the photo was taken. Multiple photos per date allowed</div></div>
+<div class="field"><div class="field-left"><span class="field-name">uri</span><span class="field-type">string</span></div><div class="field-right">Reference to photo in device-local or cloud storage. Never raw binary. Immutable after creation — delete and re-add to replace</div></div>
+<div class="field"><div class="field-left"><span class="field-name">angle</span><span class="field-type">'front' | 'back' | 'side_left' | 'side_right' | 'other'?</span></div><div class="field-right">Optional. Enables side-by-side comparison views by angle over time</div></div>
+<div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">Optional caption or context</div></div>
+<div class="field"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">System-set when record is created. Immutable</div></div>
+</div>
+</div>
+</div>
+
+</body>
+</html>
