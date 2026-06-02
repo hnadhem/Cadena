@@ -1,12 +1,12 @@
-# [App Name]
+# habIt
 
-A cross-platform mobile app for tracking habits, logging journals, and visualizing personal progress over time — built for anyone who wants a simple, flexible tool for self-improvement.
+A cross-platform mobile app for tracking habits, logging fitness sessions, and visualizing personal progress over time — built for anyone who wants a simple, flexible tool for self-improvement.
 
 ---
 
 ## Overview
 
-[App Name] helps users build awareness around their daily behaviors by logging both positive and negative habits, maintaining personal journals, and reviewing their progress through meaningful visualizations.
+habIt helps users build awareness around their daily behaviors by logging habits, tracking workouts and cardio, maintaining daily journals, and reviewing their progress through meaningful visualizations.
 
 ---
 
@@ -21,30 +21,64 @@ A cross-platform mobile app for tracking habits, logging journals, and visualizi
 
 ## Status
 
-> This project is in early planning and development. Features and structure are subject to change.
+> Active development. Core scaffolding is complete — navigation, database layer, type schema, and state management are in place. UI screens are being built out incrementally. Features and data models are subject to change.
 
 ---
 
 ## Tech Stack
 
-> To be determined
+| Layer | Choice |
+|---|---|
+| Framework | React Native + Expo SDK 54 |
+| Navigation | Expo Router (file-based) |
+| Language | TypeScript (strict mode) |
+| Local DB | expo-sqlite |
+| State | Zustand |
+| Animations | React Native Reanimated |
+| Gestures | React Native Gesture Handler |
+| Date utils | dayjs |
+| Icons | @expo/vector-icons (Ionicons) |
 
 ---
 
 ## Getting Started
 
-> Setup instructions will be added once the project is scaffolded.
+**Prerequisites:** Node.js, npm, Expo CLI, and either the Expo Go app (iOS/Android) or a simulator.
+
+```bash
+# Install dependencies
+npm install
+
+# Start the dev server
+npx expo start
+
+# Run on a specific platform
+npx expo start --ios
+npx expo start --android
+```
+
+**Other commands:**
+```bash
+npm test          # Run tests
+npm run typecheck # Type-check without emitting
+npm run lint      # Lint via Expo's config
+```
 
 ---
 
 ## Roadmap
 
-- [ ] Define core data models (habits, journal entries, users)
-- [ ] Scaffold project and choose tech stack
-- [ ] Build habit logging screen
-- [ ] Build journal screen
-- [ ] Build progress/dashboard screen
+- [x] Define core data models (habits, workout, cardio, nutrition, body metrics, journal)
+- [x] Scaffold project and choose tech stack
+- [x] Set up file-based navigation (Expo Router) with tab layout
+- [x] Build SQLite database layer and Zustand stores
+- [x] Stub Fitness, Today, and Habits screens
+- [ ] Build habit logging UI (create, log, streak tracking)
+- [ ] Build workout logging UI (live session, rest timer, set logging)
+- [ ] Build Today/dashboard screen
+- [ ] Build progress charts and summaries
 - [ ] Add notifications and reminders
+- [ ] Onboarding flow
 - [ ] Polish UI and prepare for release
 
 ---

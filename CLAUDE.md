@@ -3,28 +3,31 @@
 ## Project
 HabIt is a personal habit and fitness tracker for iOS and Android.
 Goal: help the user build and maintain daily habits with streaks, logging, and progress visibility.
-Status: early development — scaffolding in progress.
+Status: active development — scaffolding complete, screens being built out.
 
 ## Stack
-- React Native + Expo SDK (latest stable)
+- React Native + Expo SDK 54
 - Expo Router for file-based navigation
 - TypeScript — strict mode, no `any` without explicit justification
 - SQLite (expo-sqlite) for local data persistence
+- Zustand for state management
 - No backend or cloud sync — all data is device-local
 
 ## Commands
-To be updated once scaffolding is complete:
 - Install dependencies: `npm install`
 - Start dev server: `npx expo start`
 - Run tests: `npm test`
 - Type check: `npx tsc --noEmit`
+- Lint: `npm run lint`
 
 ## Folder Structure
 - `/app` — screens and routing (Expo Router convention)
-- `/components` — reusable UI components
-- `/db` — SQLite schema, migrations, and query functions
-- `/hooks` — custom React hooks
-- `/constants` — colors, spacing, typography tokens
+- `/components` — reusable UI components (`/shared`, `/ui`)
+- `/services` — SQLite database layer and migration runner
+- `/store` — Zustand stores (habit, user, workout)
+- `/types` — TypeScript schema definitions
+- `/constants` — enums, colors, spacing, typography tokens
+- `/utils` — pure utility functions (dates, unit conversion)
 
 ## Conventions
 - MUST use functional components with hooks — no class components
@@ -35,7 +38,8 @@ To be updated once scaffolding is complete:
 - Component names: PascalCase (e.g. `HabitCard`)
 
 ## Architecture
-To be documented as the project develops. Update with:
-- Core data models (Habit, Log, Streak)
-- State management approach
-- Key screens and navigation flow
+- **Data models**: defined in `/types/schema.ts` — User, Habit, HabitLog, HabitTarget, WorkoutSession, ExerciseLog, SetLog, CardioSession, PersonalRecord, Goal, DailyLog, JournalEntry, Nutrition, Medication, TallyItem, BodyMetric, ProgressPhoto
+- **State management**: Zustand stores in `/store/` — `useHabitStore` (habits + today's logs), `useUserStore` (user prefs + app mode), `useWorkoutStore` (live session, staged set input, rest timer)
+- **Database**: single migration runner in `/services/db.ts`; all DB writes go through stores or service functions, never directly from screens
+- **Navigation**: tab-based — Fitness / Today / Habits; Settings opens as a modal
+- **App modes**: `combined` (default), `fitness_only`, `habits_only` — controls which tabs are shown
