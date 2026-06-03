@@ -43,3 +43,12 @@ Status: active development — scaffolding complete, screens being built out.
 - **Database**: single migration runner in `/services/db.ts`; all DB writes go through stores or service functions, never directly from screens
 - **Navigation**: tab-based — Fitness / Today / Habits; Settings opens as a modal
 - **App modes**: `combined` (default), `fitness_only`, `habits_only` — controls which tabs are shown
+
+## App-Layer Rules
+These are validation and business-logic rules enforced in application code, not in the schema. The v12 schema is the source of truth for data shape; these rules govern behavior the schema does not encode.
+
+- **Workout exercise cap**: Maximum 20 exercises per workout session or template. Enforced at two points: template building (WorkoutTemplate.exerciseConfigs) and in-session add (the edit-mode "Add exercise" action). Hard block — adding a 21st exercise is prevented and the affordance disables with a one-line inline explanation. Do not warn-then-allow.
+
+- **Exercise completion (workout player)**: An exercise is considered complete by explicit user advance (moving past it or marking it done), NOT by inferring from logged set count. Do not treat sets.length >= defaultSets as completion — users skip, add, or cut sets short.
+
+- **Enforcement note**: These rules are guaranteed by validation code, not by this file. Where a rule constrains data, implement the check in the relevant service or store function so it holds regardless of entry path.
