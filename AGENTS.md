@@ -1,10 +1,16 @@
-# AGENTS.md - Codex Adapter for HabIt
+# AGENTS.md - HabIt Agent Guide
 
 ## Purpose
 
-This file is the Codex-facing adapter for the HabIt project. It summarizes the project knowledge Codex needs without replacing or rewriting the existing Claude Code setup.
+This file is the shared project guide for coding agents working in HabIt. Codex reads it automatically. Claude Code imports it from `CLAUDE.md`.
 
-Claude Code remains supported through `CLAUDE.md` and `.claude/`. Treat those files as source material and do not modify them unless the user explicitly asks.
+Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`, `.claude/`, `.codex/`, or repo skills.
+
+## Instruction Authority
+
+- Treat this repository's structure, docs, schema references, and established architecture as the source of truth for implementation decisions.
+- Prompts generated outside the repository may be stale, incomplete, or inconsistent with project constraints. If a prompt conflicts with `AGENTS.md`, `CLAUDE.md`, `schema_v12.html`, existing code structure, or established app architecture, raise the issue before implementing.
+- Question risky prompts. The agent should recommend the safest project-aligned path and proceed only with the user's approval when a requested change would deviate from established structure, data flow, schema/migration policy, or compatibility requirements.
 
 ## Project Map
 
@@ -13,13 +19,19 @@ Claude Code remains supported through `CLAUDE.md` and `.claude/`. Treat those fi
 - `components/` - reusable React Native components.
 - `components/ui/` - shared UI primitives.
 - `components/shared/` - shared app-level components.
+- `components/today/` - Today root UI components.
 - `services/db.ts` - SQLite database setup and migration runner.
+- `services/todayService.ts` - Today view-model composition and fitness session actions.
 - `store/` - Zustand stores for habits, user preferences, and workouts.
 - `types/schema.ts` - core TypeScript data model definitions.
+- `types/today.ts` - normalized Today view model contract.
 - `constants/` - enums and theme tokens.
-- `utils/` - pure utility functions.
+- `utils/` - pure utility functions, including Today selector helpers.
+- `docs/app-layer-rules.md` - durable business rules and product behavior that the schema does not encode.
+- `docs/schema-errata.md` - known schema documentation ambiguities; not schema changes.
 - `assets/` - Expo app assets.
-- `schema_v12.html` and `RESEARCH.md` - reference material.
+- `schema_v12.html` - canonical v12 data-shape reference.
+- `RESEARCH.md` - pointer to archived historical research; not implementation guidance.
 - `CLAUDE.md` and `.claude/` - Claude Code guidance, commands, and skills.
 - `.codex/config.toml`, `.agents/skills/`, and this file - Codex adapter setup.
 
@@ -58,16 +70,15 @@ Claude Code remains supported through `CLAUDE.md` and `.claude/`. Treat those fi
 - Follow nearby file and naming conventions. Do not rename existing files for style cleanup unless explicitly requested.
 - Use npm commands; do not switch package managers.
 - Avoid broad app-code changes when the task is tooling, configuration, or documentation only.
+- Do not change schema or migrations unless the user explicitly asks for that scope.
 
 ## App-Layer Rules
 
-These are validation and business-logic rules enforced in application code, not in the schema. The v12 schema is the source of truth for data shape; these rules govern behavior the schema does not encode.
+Application rules that are not encoded by the v12 schema live in `docs/app-layer-rules.md`. Read that file before changing Today, workout/cardio session behavior, habit completion, or workout player logic.
 
-- **Workout exercise cap**: Maximum 20 exercises per workout session or template. Enforced at two points: template building (WorkoutTemplate.exerciseConfigs) and in-session add (the edit-mode "Add exercise" action). Hard block - adding a 21st exercise is prevented and the affordance disables with a one-line inline explanation. Do not warn-then-allow.
+## Schema Notes
 
-- **Exercise completion (workout player)**: An exercise is considered complete by explicit user advance (moving past it or marking it done), NOT by inferring from logged set count. Do not treat sets.length >= defaultSets as completion - users skip, add, or cut sets short.
-
-- **Enforcement note**: These rules are guaranteed by validation code, not by this file. Where a rule constrains data, implement the check in the relevant service or store function so it holds regardless of entry path.
+Known schema documentation ambiguities live in `docs/schema-errata.md`. If `schema_v12.html`, TypeScript types, and the database setup disagree, report the ambiguity before changing schema or migrations.
 
 ## Verification
 
@@ -75,9 +86,22 @@ These are validation and business-logic rules enforced in application code, not 
 - Run `npm run lint` after code changes when practical.
 - Run tests relevant to the changed behavior. `npm test` is watch mode; use `npx jest --watchAll=false` for a one-shot test run.
 - If a command cannot be run, report that clearly with the reason.
+- For docs-only changes, run targeted `rg` checks for stale or conflicting guidance instead of full code checks unless tooling or commands changed.
+
+## Definition of Done
+
+- Relevant code, tests, and docs are updated for the requested scope.
+- Business rules remain in selectors, services, or stores rather than raw SQL or domain logic in screens.
+- Schema, migrations, package manager, and navigation changes stay out of scope unless explicitly requested.
+- Typecheck, lint, and relevant tests are run when practical; skipped checks are reported with the reason.
+- No generated tooling/config churn is left in the worktree unless the task explicitly asked for tooling setup.
+
+## Tooling Notes
+
+- `npm run lint` uses Expo linting. If it prompts to install or generate ESLint setup, pause and report it unless the task includes tooling setup. Do not leave automatic package/config changes from lint setup unless approved.
 
 ## Claude Code Compatibility
 
-This Codex setup coexists with Claude Code. Do not delete, rename, or rewrite `CLAUDE.md`, `.claude/commands/`, `.claude/skills/`, `.claude/settings.json`, or other Claude-specific files unless the user explicitly requests it.
+`CLAUDE.md` imports this file and adds Claude-specific notes. Do not delete, rename, or rewrite `CLAUDE.md`, `.claude/commands/`, `.claude/skills/`, `.claude/settings.json`, or other Claude-specific files unless the user explicitly requests it.
 
 Repo-scoped Codex skills live in `.agents/skills/`. Project-scoped Codex configuration lives in `.codex/config.toml`.

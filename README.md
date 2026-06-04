@@ -21,7 +21,7 @@ habIt helps users build awareness around their daily behaviors by logging habits
 
 ## Status
 
-> Active development. Core scaffolding is complete — navigation, database layer, type schema, and state management are in place. UI screens are being built out incrementally. Features and data models are subject to change.
+> Active development. Core scaffolding is complete — navigation, database layer, type schema, state management, and the Today root foundation are in place. Fitness and Habits remain placeholder screens. Today quick-action flows, persisted habit target integration, and workout/cardio player routes are still pending. Features and data models are subject to change.
 
 ---
 
@@ -72,10 +72,11 @@ npm run lint      # Lint via Expo's config
 - [x] Scaffold project and choose tech stack
 - [x] Set up file-based navigation (Expo Router) with tab layout
 - [x] Build SQLite database layer and Zustand stores
-- [x] Stub Fitness, Today, and Habits screens
+- [x] Stub Fitness and Habits screens
+- [x] Build Today root foundation (view model, selector/service layer, and basic UI)
 - [ ] Build habit logging UI (create, log, streak tracking)
 - [ ] Build workout logging UI (live session, rest timer, set logging)
-- [ ] Build Today/dashboard screen
+- [ ] Wire Today habit interactions, quick actions, and workout/cardio start/resume/history flows
 - [ ] Build progress charts and summaries
 - [ ] Add notifications and reminders
 - [ ] Onboarding flow
