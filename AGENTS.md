@@ -45,6 +45,8 @@ Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`
 - Jest with `jest-expo`.
 - npm package manager via `package-lock.json`.
 
+This lists the architectural core only; see `README.md` for the full dependency list.
+
 ## Commands
 
 - Install dependencies: `npm install`
@@ -71,6 +73,13 @@ Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`
 - Use npm commands; do not switch package managers.
 - Avoid broad app-code changes when the task is tooling, configuration, or documentation only.
 - Do not change schema or migrations unless the user explicitly asks for that scope.
+
+## Commit & PR Guidelines
+
+- Use Conventional Commits: `type(scope): summary` (for example `feat(today): build root screen` or `docs: consolidate project agent guidance`).
+- Keep each commit scoped to one logical change; do not bundle unrelated edits.
+- Commit or push only when the user asks; branch first if on the default branch.
+- The repo `commit-msg` skill/command can generate a message from staged changes.
 
 ## App-Layer Rules
 

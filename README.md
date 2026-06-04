@@ -13,7 +13,8 @@ habIt helps users build awareness around their daily behaviors by logging habits
 ## Features
 
 - **Habit Tracking** — Log positive and negative habits daily, with streaks and history
-- **Journals** — Create and maintain multiple journals (fitness, mental health, general, etc.)
+- **Fitness Logging** — Track workout and cardio sessions, with templates, schedules, and history
+- **Optional Modules** — Nutrition, medication, tally, body metrics, and journaling, enabled per user
 - **Progress Tracking** — View trends and progress over time through charts and summaries
 - **Cross-Platform** — Available on both iOS and Android
 

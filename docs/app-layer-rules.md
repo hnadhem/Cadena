@@ -61,16 +61,18 @@ Fitness action rules:
 - Move to Tomorrow does not mutate future generated sessions.
 - Move to Tomorrow is blocked if the destination date already has the same workout/cardio routine.
 - Move to Tomorrow is allowed if the destination date has a different routine.
-- Use `templateId` as the primary routine identity unless an established routine identifier supersedes it.
-- For ad-hoc sessions with no `templateId`, use `name` plus kind as fallback.
-- If both `templateId` and `name` are missing, allow the move.
+
+Routine identity for the "same routine" check (first matching row wins, unless an established routine identifier supersedes `templateId`):
+
+| Session has | Identify routine by |
+|---|---|
+| `templateId` present | `templateId` |
+| No `templateId`, `name` present | `name` plus kind |
+| Neither `templateId` nor `name` | allow the move |
 
 Known Today gaps:
 
-- Persisted HabitTarget integration is pending.
-- Full habit logging interactions are pending.
-- Quick-action flows are pending.
-- Workout/cardio player start, resume, summary, and history routes are pending.
+- For current pending/unbuilt Today work (persisted HabitTarget, habit logging interactions, quick-action flows, and workout/cardio player routes), see the Roadmap in `README.md`. Do not duplicate that status here.
 - Timezone handling still follows existing `utils/dateUtils.ts` behavior; do not perform a broad timezone refactor as part of Today work unless explicitly requested.
 
 ## Workout Player
