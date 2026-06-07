@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { RelativePathString } from 'expo-router';
 import { TodayFitnessCard } from '../../components/today/TodayFitnessCard';
 import { TodayHabitRow } from '../../components/today/TodayHabitRow';
 import { TodayHabitSummary } from '../../components/today/TodayHabitSummary';
@@ -23,7 +24,11 @@ import {
   moveTodayFitnessSessionToTomorrow,
   skipTodayFitnessSession,
 } from '../../services/todayService';
-import type { TodayFitnessItem, TodayViewModel } from '../../types/today';
+import type {
+  TodayFitnessItem,
+  TodayQuickAction,
+  TodayViewModel,
+} from '../../types/today';
 
 export default function TodayScreen() {
   const [viewModel, setViewModel] = useState<TodayViewModel | null>(null);
@@ -103,6 +108,32 @@ export default function TodayScreen() {
     [loadToday, viewModel?.selectedDate]
   );
 
+  const handleFitnessPress = useCallback((item: TodayFitnessItem) => {
+    const sessionRoute =
+      item.kind === 'workout'
+        ? (`../workout/${item.id}` as RelativePathString)
+        : (`../cardio/${item.id}` as RelativePathString);
+
+    router.push(sessionRoute);
+  }, []);
+
+  const handleQuickActionPress = useCallback((action: TodayQuickAction) => {
+    switch (action.kind) {
+      case 'checkIn':
+        router.push('../check-in');
+        break;
+      case 'nutrition':
+        router.push('../nutrition');
+        break;
+      case 'medication':
+        router.push('../medication');
+        break;
+      case 'tally':
+        router.push('../tally');
+        break;
+    }
+  }, []);
+
   if (loading && !viewModel) {
     return (
       <View style={styles.container}>
@@ -146,10 +177,10 @@ export default function TodayScreen() {
         <TodaySection title="Fitness">
           {today && today.fitnessItems.length > 0 ? (
             today.fitnessItems.map((item) => (
-              // TODO: Pass onPress when workout/cardio start, resume, and history routes exist.
               <TodayFitnessCard
                 key={`${item.kind}-${item.id}`}
                 item={item}
+                onPress={handleFitnessPress}
                 actionPending={pendingActionKey === getFitnessActionKey(item)}
                 onSkip={handleSkipSession}
                 onMoveToTomorrow={handleMoveSession}
@@ -176,8 +207,10 @@ export default function TodayScreen() {
         </TodaySection>
 
         <TodaySection title="Quick actions">
-          {/* TODO: Wire quick actions once check-in, nutrition, medication, and tally routes exist. */}
-          <TodayQuickActionRow actions={today?.quickActions ?? []} />
+          <TodayQuickActionRow
+            actions={today?.quickActions ?? []}
+            onActionPress={handleQuickActionPress}
+          />
         </TodaySection>
       </ScrollView>
     </View>

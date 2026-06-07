@@ -20,6 +20,21 @@ export function getEffectiveDate(date: dayjs.ConfigType, dayEndTime = '00:00'): 
   return d.isBefore(boundary) ? d.subtract(1, 'day').startOf('day') : d.startOf('day');
 }
 
+export function getDeviceTimezone(): string {
+  return dayjs.tz.guess();
+}
+
+export function formatDateLabelInTimezone(
+  date: dayjs.ConfigType,
+  timezoneName = getDeviceTimezone()
+): string {
+  try {
+    return dayjs.tz(date, timezoneName).format('MMMM D');
+  } catch {
+    return dayjs.tz(date, getDeviceTimezone()).format('MMMM D');
+  }
+}
+
 /**
  * Returns "Today", "Yesterday", "Tomorrow", or a formatted date string.
  */
