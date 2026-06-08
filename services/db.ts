@@ -215,6 +215,7 @@ const migrations: Migration[] = [
           completedAt TEXT,
           loggedAt TEXT NOT NULL,
           isRetroactive INTEGER NOT NULL DEFAULT 0,
+          cardioDate TEXT,
           durationMinutes REAL,
           durationOverridden INTEGER NOT NULL DEFAULT 0,
           distanceMiles REAL,
@@ -310,6 +311,7 @@ const migrations: Migration[] = [
           energyLevel INTEGER,
           bodyweightLbs REAL,
           note TEXT,
+          tags TEXT,
           createdAt TEXT NOT NULL,
           updatedAt TEXT NOT NULL,
           UNIQUE(userId, date)

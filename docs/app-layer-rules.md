@@ -1,6 +1,6 @@
 # App-Layer Rules
 
-These rules describe application behavior that is enforced in code, not in the v12 schema. The schema remains the source of truth for data shape. Do not create schema changes or migrations from this file without explicit user approval.
+These rules describe application behavior that is enforced in code, not in the v13 schema. The schema remains the source of truth for data shape. Do not create schema changes or migrations from this file without explicit user approval.
 
 ## Today Root
 

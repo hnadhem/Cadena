@@ -1,22 +1,15 @@
 # Schema Errata
 
-This file records known ambiguities in `schema_v12.html`. It does not change the v12 schema and does not authorize migrations.
+This file records known schema documentation ambiguities. It does not change the schema and does not authorize migrations.
 
-## CardioSession Retroactive Date Anchor
+## Resolved in v13: CardioSession Retroactive Date Anchor
 
-`schema_v12.html` says the retroactive window for both `WorkoutSession` and `CardioSession` is evaluated against `workoutDate`.
+v12 said the retroactive window for both `WorkoutSession` and `CardioSession` was evaluated against `workoutDate`.
 
-Current ambiguity:
+Resolved decision:
 
-- `WorkoutSession.workoutDate` is documented in v12.
-- `CardioSession.workoutDate` is not documented as a field in v12.
+- `WorkoutSession.workoutDate` remains the workout retroactive-window anchor.
+- `CardioSession.cardioDate` is introduced in v13 and is the cardio retroactive-window anchor.
+- Code should use `cardioDate` for retroactive cardio date filtering and keep timestamp-based checks for live/completed cardio sessions where `cardioDate` is null.
 
-Current implementation guidance:
-
-- Do not add `workoutDate` to `CardioSession` without an explicit schema/migration task.
-- Do not create migrations from this errata note.
-- Until a v13 decision is made, code should use existing persisted CardioSession fields or leave a clearly documented TODO instead of inventing a new date column.
-
-Future schema decision needed:
-
-- Either add a CardioSession logical date field in a future schema version, or clarify which existing CardioSession timestamp anchors retroactive-window checks.
+No future schema decision is pending for this ambiguity.

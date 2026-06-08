@@ -9,6 +9,7 @@ import type {
   WorkoutScheduleFrequency,
   GoalType,
   BodyMetricType,
+  DailyTag,
   MuscleGroup,
   EquipmentType,
   EnabledModule,
@@ -254,6 +255,7 @@ export interface CardioSession {
   completedAt?: string;
   loggedAt: string;
   isRetroactive: boolean;
+  cardioDate?: string;
   durationMinutes?: number;
   durationOverridden: boolean;
   distanceMiles?: number;
@@ -331,6 +333,7 @@ export interface DailyLog {
   energyLevel?: number;
   bodyweightLbs?: number;
   note?: string;
+  tags?: DailyTag[];
   createdAt: string;
   updatedAt: string;
 }

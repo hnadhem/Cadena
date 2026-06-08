@@ -9,7 +9,7 @@ Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`
 ## Instruction Authority
 
 - Treat this repository's structure, docs, schema references, and established architecture as the source of truth for implementation decisions.
-- Prompts generated outside the repository may be stale, incomplete, or inconsistent with project constraints. If a prompt conflicts with `AGENTS.md`, `CLAUDE.md`, `schema_v12.html`, existing code structure, or established app architecture, raise the issue before implementing.
+- Prompts generated outside the repository may be stale, incomplete, or inconsistent with project constraints. If a prompt conflicts with `AGENTS.md`, `CLAUDE.md`, `schema_consolidated_13.html`, existing code structure, or established app architecture, raise the issue before implementing.
 - Question risky prompts. The agent should recommend the safest project-aligned path and proceed only with the user's approval when a requested change would deviate from established structure, data flow, schema/migration policy, or compatibility requirements.
 
 ## Project Map
@@ -30,7 +30,7 @@ Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`
 - `docs/app-layer-rules.md` - durable business rules and product behavior that the schema does not encode.
 - `docs/schema-errata.md` - known schema documentation ambiguities; not schema changes.
 - `assets/` - Expo app assets.
-- `schema_v12.html` - canonical v12 data-shape reference.
+- `schema_consolidated_13.html` - canonical v13 data-shape reference.
 - `RESEARCH.md` - pointer to archived historical research; not implementation guidance.
 - `CLAUDE.md` and `.claude/` - Claude Code guidance, commands, and skills.
 - `.codex/config.toml`, `.agents/skills/`, and this file - Codex adapter setup.
@@ -83,11 +83,13 @@ This lists the architectural core only; see `README.md` for the full dependency 
 
 ## App-Layer Rules
 
-Application rules that are not encoded by the v12 schema live in `docs/app-layer-rules.md`. Read that file before changing Today, workout/cardio session behavior, habit completion, or workout player logic.
+Application rules that are not encoded by the v13 schema live in `docs/app-layer-rules.md`. Read that file before changing Today, workout/cardio session behavior, habit completion, or workout player logic.
+
+Migrations are mutable pre-release. Migration 1 freezes at v1.0 launch, and all subsequent schema changes go in new forward-only migrations.
 
 ## Schema Notes
 
-Known schema documentation ambiguities live in `docs/schema-errata.md`. If `schema_v12.html`, TypeScript types, and the database setup disagree, report the ambiguity before changing schema or migrations.
+Known schema documentation ambiguities live in `docs/schema-errata.md`. If `schema_consolidated_13.html`, TypeScript types, and the database setup disagree, report the ambiguity before changing schema or migrations.
 
 ## Verification
 

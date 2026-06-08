@@ -1,9 +1,9 @@
-f<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Full App Schema — Consolidated v12</title>
+<title>Full App Schema — Consolidated v13</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8f7f4; color: #1a1a1a; padding: 32px 24px; max-width: 1200px; margin: 0 auto; }
@@ -60,9 +60,9 @@ f<!DOCTYPE html>
 </head>
 <body>
 
-<h1>Full App Schema — Consolidated v12</h1>
+<h1>Full App Schema — Consolidated v13</h1>
 <p class="doc-subtitle">All entities, fields, types, and locked decisions</p>
-<p class="doc-meta">Updated · Added UserPreferences.seenProgressionIntentTooltip and modulesEnabled · Added WorkoutSession.workoutDate · Added retroactive window and completedAt write timing to canonical rules</p>
+<p class="doc-meta">v13 · Added DailyLog.tags with fixed seeded DailyTag list · Added CardioSession.cardioDate as the retroactive-window anchor for cardio · Updated retroactive window rule to anchor workouts on workoutDate and cardio on cardioDate · Added Daily tags canonical rule</p>
 
 <div class="legend">
   <span>Legend:</span>
@@ -376,6 +376,7 @@ f<!DOCTYPE html>
 <div class="field"><div class="field-left"><span class="field-name">completedAt</span><span class="field-type">ISO string?</span></div><div class="field-right">System-set. Immutable after set</div></div>
 <div class="field field-new"><div class="field-left"><span class="field-name">loggedAt</span><span class="field-type">ISO string</span></div><div class="field-right">When record entered the system. Always system-set</div></div>
 <div class="field field-new"><div class="field-left"><span class="field-name">isRetroactive</span><span class="field-type">boolean</span></div><div class="field-right">True when logged after the fact. Default false</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">cardioDate</span><span class="field-type">ISO date?</span></div><div class="field-right">The calendar day the cardio activity actually occurred. Null for live sessions — derived from startedAt at query time. Required when isRetroactive = true. Used as the anchor for the 3-day retroactive window check. Never derived from loggedAt</div></div>
 <div class="field"><div class="field-left"><span class="field-name">durationMinutes</span><span class="field-type">number?</span></div><div class="field-right">Total duration. User-overridable</div></div>
 <div class="field field-new"><div class="field-left"><span class="field-name">durationOverridden</span><span class="field-type">boolean</span></div><div class="field-right">True when durationMinutes set by user. Default false</div></div>
 <div class="field"><div class="field-left"><span class="field-name">distanceMiles</span><span class="field-type">number?</span></div><div class="field-right">Total distance. Stored in miles</div></div>
@@ -497,6 +498,7 @@ f<!DOCTYPE html>
 <div class="field"><div class="field-left"><span class="field-name">energyLevel</span><span class="field-type">number? (1–5)</span></div><div class="field-right">Whole-day energy. Provides RPE context in trends</div></div>
 <div class="field field-new"><div class="field-left"><span class="field-name">bodyweightLbs</span><span class="field-type">number?</span></div><div class="field-right">Optional weigh-in. Stored in lbs. Converted for display. Hidden option in UI — not a primary journal element</div></div>
 <div class="field"><div class="field-left"><span class="field-name">note</span><span class="field-type">string?</span></div><div class="field-right">General daily note. Not fitness-specific</div></div>
+<div class="field field-new"><div class="field-left"><span class="field-name">tags</span><span class="field-type">DailyTag[]?</span></div><div class="field-right">Multi-select from a fixed seeded list. Day-level context annotations. Null or empty = no tags. Surfaced in trends to annotate why a day deviated and to filter (e.g. training on poor-sleep days). Seeded list is read-only — users select but cannot add custom tags in v1. Stored as tag keys, never display strings</div></div>
 <div class="field"><div class="field-left"><span class="field-name">createdAt</span><span class="field-type">ISO string</span></div><div class="field-right">System-set on first write</div></div>
 <div class="field"><div class="field-left"><span class="field-name">updatedAt</span><span class="field-type">ISO string</span></div><div class="field-right">Last edit timestamp</div></div>
 </div>
@@ -869,6 +871,12 @@ f<!DOCTYPE html>
 <span class="enum-val enum-val-new">body_fat_pct</span><span class="enum-val enum-val-new">chest_cm</span><span class="enum-val enum-val-new">waist_cm</span><span class="enum-val enum-val-new">hips_cm</span><span class="enum-val enum-val-new">bicep_cm</span><span class="enum-val enum-val-new">thigh_cm</span><span class="enum-val enum-val-new">neck_cm</span><span class="enum-val enum-val-new">shoulder_cm</span><span class="enum-val enum-val-new">calf_cm</span><span class="enum-val enum-val-new">resting_heart_rate</span><span class="enum-val enum-val-new">blood_pressure_systolic</span><span class="enum-val enum-val-new">blood_pressure_diastolic</span><span class="enum-val enum-val-new">vo2_max</span>
 </div></div>
 
+<div class="enum-block">
+<div class="enum-header"><span class="enum-name">DailyTag</span><span style="font-size:9px;font-weight:700;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;">new</span></div>
+<div class="enum-values">
+<span class="enum-val enum-val-new">sick</span><span class="enum-val enum-val-new">injured</span><span class="enum-val enum-val-new">traveling</span><span class="enum-val enum-val-new">rest_day</span><span class="enum-val enum-val-new">poor_sleep</span><span class="enum-val enum-val-new">high_stress</span><span class="enum-val enum-val-new">social_event</span><span class="enum-val enum-val-new">busy</span>
+</div></div>
+
 </div>
 
 <div class="decisions" style="margin-top:16px;">
@@ -902,8 +910,9 @@ f<!DOCTYPE html>
 <div class="decision-item"><div class="decision-left"><div class="decision-key">Habit–Tally sync</div></div><div class="decision-right">When Habit.linkedTallyItemId is set, TallyLog.count and HabitLog.value represent the same number and are kept in sync by the application. Tally is the primary input surface — writes to TallyLog propagate to HabitLog.value, and writes to HabitLog.value propagate to TallyLog.count. Only valid for measurable habits (habitType = 'measurable'). App enforces unit consistency between the linked Habit and TallyItem at creation time. Linking a binary habit to a TallyItem is not permitted</div></div>
 <div class="decision-item"><div class="decision-left"><div class="decision-key">Day boundary</div></div><div class="decision-right">UserPreferences.dayEndTime defines when the user's day ends. Default "00:00" (midnight), configurable up to "04:00". Activity logged between midnight and dayEndTime counts toward the previous calendar date. Storage always uses the actual calendar date — the offset is applied only at the display and streak calculation layer. No schema changes required on log entities</div></div>
 <div class="decision-item"><div class="decision-left"><div class="decision-key">Progression intent</div></div><div class="decision-right">ExerciseLog.progressionIntent is user-declared at session end, per exercise. It is optional and never system-derived. The workout player queries the most recent completed ExerciseLog for a given exerciseId (normal sets only) at session start and surfaces progressionIntent alongside the last session summary (e.g. "3 sets · 140/140/130 lb · May 1 ↑"). Null = user did not log a signal for that exercise that session</div></div>
-<div class="decision-item"><div class="decision-left"><div class="decision-key">Retroactive window</div></div><div class="decision-right">All retroactive entry is capped at 3 calendar days from the end of the current day (dayEndTime). For WorkoutSession and CardioSession, the window is evaluated against workoutDate. For HabitLog, MedicationLog, and DailyLog, the window is evaluated against date. Enforced at the application layer. Dates outside the window are not selectable in any date picker — an inline explanation is shown to the user</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Retroactive window</div></div><div class="decision-right">All retroactive entry is capped at 3 calendar days from the end of the current day (dayEndTime). For WorkoutSession, the window is evaluated against workoutDate. For CardioSession, the window is evaluated against cardioDate. For HabitLog, MedicationLog, and DailyLog, the window is evaluated against date. Enforced at the application layer. Dates outside the window are not selectable in any date picker — an inline explanation is shown to the user</div></div>
 <div class="decision-item"><div class="decision-left"><div class="decision-key">Session completedAt timing</div></div><div class="decision-right">WorkoutSession.completedAt is set when the user taps Save on the session summary modal, not when End Session is tapped. End Session opens the summary but does not write completedAt or change status to completed. The session remains status = live until Save fires on the summary</div></div>
+<div class="decision-item"><div class="decision-left"><div class="decision-key">Daily tags</div></div><div class="decision-right">DailyLog.tags draws from the fixed seeded DailyTag list — read-only, no custom tags in v1. Stored as an array of tag keys, never display strings. Tags are day-level context for trend annotation and filtering, not pass/fail signals. Single-entry model unchanged: one DailyLog row per (userId, date), tags edited in place. Reopening Check-in on the same day edits the existing row, so previously selected tags persist by default</div></div>
 </div>
 </div>
 

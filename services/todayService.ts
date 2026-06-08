@@ -73,6 +73,7 @@ interface CardioSessionRow {
   scheduledTime: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  cardioDate: string | null;
 }
 
 interface ActionSessionRow {
@@ -317,22 +318,23 @@ async function loadCardioFitnessItems(
   userId: string,
   selectedDate: string
 ): Promise<TodayFitnessItem[]> {
-  // TODO: CardioSession has no workoutDate equivalent. Retroactive cardio date
-  // filtering should use the future schema-supported anchor, not a migration here.
   const rows = await getDb().getAllAsync<CardioSessionRow>(
     `SELECT
       id, templateId, scheduleId, templateNameSnapshot, type, subtype,
-      sportName, status, scheduledDate, scheduledTime, startedAt, completedAt
+      sportName, status, scheduledDate, scheduledTime, startedAt, completedAt,
+      cardioDate
     FROM CardioSession
     WHERE userId = ?
       AND status IN ('planned', 'live', 'completed', 'skipped')
       AND (
         scheduledDate = ?
+        OR cardioDate = ?
         OR date(startedAt) = ?
         OR date(completedAt) = ?
       )
     ORDER BY scheduledTime IS NULL, scheduledTime, loggedAt`,
     userId,
+    selectedDate,
     selectedDate,
     selectedDate,
     selectedDate

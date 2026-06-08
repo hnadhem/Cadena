@@ -101,6 +101,18 @@ export const BodyMetricType = {
 } as const;
 export type BodyMetricType = (typeof BodyMetricType)[keyof typeof BodyMetricType];
 
+export const DailyTag = {
+  SICK: 'sick',
+  INJURED: 'injured',
+  TRAVELING: 'traveling',
+  REST_DAY: 'rest_day',
+  POOR_SLEEP: 'poor_sleep',
+  HIGH_STRESS: 'high_stress',
+  SOCIAL_EVENT: 'social_event',
+  BUSY: 'busy',
+} as const;
+export type DailyTag = (typeof DailyTag)[keyof typeof DailyTag];
+
 export const MuscleGroup = {
   CHEST: 'chest',
   BACK: 'back',
