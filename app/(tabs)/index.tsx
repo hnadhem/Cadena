@@ -15,6 +15,7 @@ import type { RelativePathString } from 'expo-router';
 import { TodayFitnessCard } from '../../components/today/TodayFitnessCard';
 import { TodayHabitRow } from '../../components/today/TodayHabitRow';
 import { TodayHabitSummary } from '../../components/today/TodayHabitSummary';
+import { TodayCheckInSheet } from '../../components/today/TodayCheckInSheet';
 import { TodayQuickActionRow } from '../../components/today/TodayQuickActionRow';
 import { TodaySection } from '../../components/today/TodaySection';
 import { Button } from '../../components/ui/Button';
@@ -29,6 +30,12 @@ import type {
   TodayQuickAction,
   TodayViewModel,
 } from '../../types/today';
+import {
+  hasTodayCheckIn,
+  saveTodayCheckInByDate,
+  type TodayCheckInDraft,
+  type TodayCheckInsByDate,
+} from '../../utils/todayCheckIn';
 
 export default function TodayScreen() {
   const [viewModel, setViewModel] = useState<TodayViewModel | null>(null);
@@ -36,6 +43,8 @@ export default function TodayScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
+  const [checkInsByDate, setCheckInsByDate] = useState<TodayCheckInsByDate>({});
+  const [checkInSheetVisible, setCheckInSheetVisible] = useState(false);
 
   const loadToday = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -120,7 +129,7 @@ export default function TodayScreen() {
   const handleQuickActionPress = useCallback((action: TodayQuickAction) => {
     switch (action.kind) {
       case 'checkIn':
-        router.push('../check-in');
+        setCheckInSheetVisible(true);
         break;
       case 'nutrition':
         router.push('../nutrition');
@@ -133,6 +142,27 @@ export default function TodayScreen() {
         break;
     }
   }, []);
+
+  const handleCheckInClose = useCallback(() => {
+    setCheckInSheetVisible(false);
+  }, []);
+
+  const handleCheckInSave = useCallback(
+    (draft: TodayCheckInDraft) => {
+      const selectedDate = viewModel?.selectedDate;
+      if (!selectedDate) return;
+
+      const result = saveTodayCheckInByDate(checkInsByDate, selectedDate, draft);
+      if (!result.ok) {
+        Alert.alert('Could not save check-in', result.error);
+        return;
+      }
+
+      setCheckInsByDate(result.checkInsByDate);
+      setCheckInSheetVisible(false);
+    },
+    [checkInsByDate, viewModel?.selectedDate]
+  );
 
   if (loading && !viewModel) {
     return (
@@ -158,6 +188,12 @@ export default function TodayScreen() {
   }
 
   const today = viewModel;
+  const selectedDate = today?.selectedDate ?? '';
+  const hasSelectedDateCheckIn =
+    selectedDate.length > 0 && hasTodayCheckIn(checkInsByDate, selectedDate);
+  const checkedActionKinds: TodayQuickAction['kind'][] = hasSelectedDateCheckIn
+    ? ['checkIn']
+    : [];
 
   return (
     <View style={styles.container}>
@@ -209,10 +245,18 @@ export default function TodayScreen() {
         <TodaySection title="Quick actions">
           <TodayQuickActionRow
             actions={today?.quickActions ?? []}
+            checkedActionKinds={checkedActionKinds}
             onActionPress={handleQuickActionPress}
           />
         </TodaySection>
       </ScrollView>
+      <TodayCheckInSheet
+        visible={checkInSheetVisible}
+        date={selectedDate}
+        value={selectedDate.length > 0 ? checkInsByDate[selectedDate] : undefined}
+        onClose={handleCheckInClose}
+        onSave={handleCheckInSave}
+      />
     </View>
   );
 }
