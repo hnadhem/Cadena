@@ -18,6 +18,7 @@ import { TodayHabitSummary } from '../../components/today/TodayHabitSummary';
 import { TodayCheckInSheet } from '../../components/today/TodayCheckInSheet';
 import { TodayQuickActionRow } from '../../components/today/TodayQuickActionRow';
 import { TodaySection } from '../../components/today/TodaySection';
+import { TodayTallySheet } from '../../components/today/TodayTallySheet';
 import { Button } from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../constants/theme';
 import {
@@ -36,6 +37,12 @@ import {
   type TodayCheckInDraft,
   type TodayCheckInsByDate,
 } from '../../utils/todayCheckIn';
+import {
+  decrementTodayTallyCount,
+  getTodayTallyRowsForDate,
+  incrementTodayTallyCount,
+  type TodayTallyLogsByDate,
+} from '../../utils/todayTally';
 
 export default function TodayScreen() {
   const [viewModel, setViewModel] = useState<TodayViewModel | null>(null);
@@ -45,6 +52,8 @@ export default function TodayScreen() {
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
   const [checkInsByDate, setCheckInsByDate] = useState<TodayCheckInsByDate>({});
   const [checkInSheetVisible, setCheckInSheetVisible] = useState(false);
+  const [tallyLogsByDate, setTallyLogsByDate] = useState<TodayTallyLogsByDate>({});
+  const [tallySheetVisible, setTallySheetVisible] = useState(false);
 
   const loadToday = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -138,7 +147,7 @@ export default function TodayScreen() {
         router.push('../medication');
         break;
       case 'tally':
-        router.push('../tally');
+        setTallySheetVisible(true);
         break;
     }
   }, []);
@@ -162,6 +171,54 @@ export default function TodayScreen() {
       setCheckInSheetVisible(false);
     },
     [checkInsByDate, viewModel?.selectedDate]
+  );
+
+  const handleTallyClose = useCallback(() => {
+    setTallySheetVisible(false);
+  }, []);
+
+  const handleTallyIncrement = useCallback(
+    (tallyItemId: string) => {
+      const selectedDate = viewModel?.selectedDate;
+      if (!selectedDate) return;
+
+      setTallyLogsByDate((currentLogs) => {
+        const result = incrementTodayTallyCount(
+          currentLogs,
+          selectedDate,
+          tallyItemId
+        );
+        if (!result.ok) {
+          Alert.alert('Could not update tally', result.error);
+          return currentLogs;
+        }
+
+        return result.tallyLogsByDate;
+      });
+    },
+    [viewModel?.selectedDate]
+  );
+
+  const handleTallyUndoIncrement = useCallback(
+    (tallyItemId: string) => {
+      const selectedDate = viewModel?.selectedDate;
+      if (!selectedDate) return;
+
+      setTallyLogsByDate((currentLogs) => {
+        const result = decrementTodayTallyCount(
+          currentLogs,
+          selectedDate,
+          tallyItemId
+        );
+        if (!result.ok) {
+          Alert.alert('Could not update tally', result.error);
+          return currentLogs;
+        }
+
+        return result.tallyLogsByDate;
+      });
+    },
+    [viewModel?.selectedDate]
   );
 
   if (loading && !viewModel) {
@@ -194,6 +251,10 @@ export default function TodayScreen() {
   const checkedActionKinds: TodayQuickAction['kind'][] = hasSelectedDateCheckIn
     ? ['checkIn']
     : [];
+  const tallyRows =
+    selectedDate.length > 0
+      ? getTodayTallyRowsForDate(tallyLogsByDate, selectedDate)
+      : [];
 
   return (
     <View style={styles.container}>
@@ -256,6 +317,14 @@ export default function TodayScreen() {
         value={selectedDate.length > 0 ? checkInsByDate[selectedDate] : undefined}
         onClose={handleCheckInClose}
         onSave={handleCheckInSave}
+      />
+      <TodayTallySheet
+        visible={tallySheetVisible}
+        date={selectedDate}
+        rows={tallyRows}
+        onClose={handleTallyClose}
+        onIncrement={handleTallyIncrement}
+        onUndoIncrement={handleTallyUndoIncrement}
       />
     </View>
   );
