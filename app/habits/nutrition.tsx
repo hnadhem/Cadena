@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from '../../components/shared/PlaceholderScreen';
+import { NutritionLogger } from '../../components/nutrition/NutritionLogger';
 
 export default function HabitsNutritionScreen() {
-  return (
-    <PlaceholderScreen
-      title="Nutrition & Meds"
-      message="Placeholder screen."
-    />
-  );
+  return <NutritionLogger routeTitle="Nutrition & Meds" />;
 }

@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from '../components/shared/PlaceholderScreen';
+import { NutritionLogger } from '../components/nutrition/NutritionLogger';
 
 export default function NutritionScreen() {
-  return (
-    <PlaceholderScreen
-      title="Nutrition"
-      message="Nutrition logging will be available here."
-    />
-  );
+  return <NutritionLogger />;
 }
