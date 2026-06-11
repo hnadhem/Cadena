@@ -28,6 +28,10 @@ web-build/
 .DS_Store
 *.pem
 
+# Local editor and assistant state
+.idea/
+.claude/settings.local.json
+
 # Environment
 .env
 .env.local

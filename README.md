@@ -1,96 +1,112 @@
-# habIt
-
-A cross-platform mobile app for tracking habits, logging fitness sessions, and visualizing personal progress over time — built for anyone who wants a simple, flexible tool for self-improvement.
-
----
+# HabIt
 
 ## Overview
 
-habIt helps users build awareness around their daily behaviors by logging habits, tracking workouts and cardio, maintaining daily journals, and reviewing their progress through meaningful visualizations.
+HabIt is an in-progress Expo/React Native mobile app for daily habit tracking, fitness planning, and lightweight personal check-ins. It is being built as a local-first product centered on a single Today view.
 
----
+## Demo / Screenshots
 
-## Features
+No demo assets are included yet.
 
-- **Habit Tracking** — Log positive and negative habits daily, with streaks and history
-- **Fitness Logging** — Track workout and cardio sessions, with templates, schedules, and history
-- **Optional Modules** — Nutrition, medication, tally, body metrics, and journaling, enabled per user
-- **Progress Tracking** — View trends and progress over time through charts and summaries
-- **Cross-Platform** — Available on both iOS and Android
+| Asset | Status |
+| --- | --- |
+| Short GIF/video | Planned |
+| Static mobile screenshots | Planned |
+| Figma/design link | Optional; not currently included |
 
----
+## Core Features
 
-## Status
+- **Today view:** Central daily screen with fitness activity, habit summary, habit rows, and quick actions.
+- **Habit foundation:** Typed habit models, Zustand habit state, and Today habit sorting/completion summary logic.
+- **Fitness foundation:** Workout/cardio schema, session store, Today fitness cards, and Skip / Move to Tomorrow actions.
+- **Quick actions:** Check-in, Nutrition, and tally bottom sheets currently validate interaction patterns with local state.
+- **Navigation scaffold:** Expo Router tabs for Fitness, Today, and Habits, plus placeholder routes for planned feature areas.
+- **Local data layer:** SQLite setup and migration runner based on the v13 schema reference.
+- **Tests:** Jest coverage for Today selectors, Today service behavior, check-in utilities, tally utilities, and date utilities.
 
-> Active development. Core scaffolding is complete — navigation, database layer, type schema, state management, and the Today root foundation are in place. Fitness and Habits remain placeholder screens. Today quick-action flows, persisted habit target integration, and workout/cardio player routes are still pending. Features and data models are subject to change.
+## Product Rationale
 
----
+- The product prioritizes a Today-centered workflow so daily fitness, habits, and lightweight context are visible without switching tools.
+- The app is local-first for now to keep early development focused on core workflows.
+- The schema and service layers were built before full UI completion to keep habit, workout, and module flows consistent.
+- Optional modules such as nutrition and medication are scaffolded separately from core habit completion to avoid overloading the main routine score.
+- Some interactions are intentionally prototype-level while persistence and full editing flows are still being built.
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | React Native + Expo SDK 54 |
-| Navigation | Expo Router (file-based) |
-| Language | TypeScript (strict mode) |
-| Local DB | expo-sqlite |
-| State | Zustand |
-| Animations | React Native Reanimated |
-| Gestures | React Native Gesture Handler |
-| Date utils | dayjs |
-| Icons | @expo/vector-icons (Ionicons) |
+| Area | Technology |
+| --- | --- |
+| Framework | React Native with Expo SDK 54 |
+| Navigation | Expo Router |
+| Language | TypeScript |
+| Local persistence | expo-sqlite |
+| State management | Zustand |
+| UI | React Native components, shared theme tokens, Ionicons |
+| Dates | dayjs |
+| Testing | Jest with jest-expo |
+| Package manager | npm |
 
----
+## Current Status
 
-## Getting Started
+HabIt is under active development and is not complete or release-ready.
 
-**Prerequisites:** Node.js, npm, Expo CLI, and either the Expo Go app (iOS/Android) or a simulator.
+Built:
 
-```bash
-# Install dependencies
-npm install
+- Expo app scaffold and tab navigation
+- SQLite schema/migration setup
+- Typed domain models
+- Zustand stores for user, habit, and workout state
+- Initial Today screen and supporting service/selectors
+- Placeholder screens for planned Fitness, Habits, workout/cardio, settings, nutrition, medication, and tally flows
 
-# Start the dev server
-npx expo start
+Still in progress:
 
-# Run on a specific platform
-npx expo start --ios
-npx expo start --android
-```
-
-**Other commands:**
-```bash
-npm test          # Run tests
-npm run typecheck # Type-check without emitting
-npm run lint      # Lint via Expo's config
-```
-
----
+- Persisted habit creation, editing, targets, and daily logging
+- Workout/cardio start, resume, and history flows
+- Schedule generation for planned sessions
+- Persisted check-in, tally, nutrition, and medication workflows
+- Progress summaries, onboarding, reminders, and final visual polish
 
 ## Roadmap
 
-- [x] Define core data models (habits, workout, cardio, nutrition, body metrics, journal)
-- [x] Scaffold project and choose tech stack
-- [x] Set up file-based navigation (Expo Router) with tab layout
-- [x] Build SQLite database layer and Zustand stores
-- [x] Stub Fitness and Habits screens
-- [x] Build Today root foundation (view model, selector/service layer, and basic UI)
-- [ ] Build habit logging UI (create, log, streak tracking)
-- [ ] Build workout logging UI (live session, rest timer, set logging)
-- [ ] Wire Today habit interactions, quick actions, and workout/cardio start/resume/history flows
-- [ ] Build progress charts and summaries
-- [ ] Add notifications and reminders
-- [ ] Onboarding flow
-- [ ] Polish UI and prepare for release
+- Complete persisted habit management and logging
+- Build workout/cardio session player flows
+- Wire schedule generation into Today
+- Add progress charts and summaries
+- Persist optional module workflows
+- Add onboarding and settings
+- Add screenshots, final app assets, and release packaging
 
----
+## Running Locally
 
-## Contributing
+Prerequisites:
 
-This is a personal project. Contribution guidelines may be added in the future.
+- Node.js and npm
+- Expo-compatible iOS/Android simulator or Expo Go on a device
 
----
+Install dependencies:
 
-## License
+```bash
+npm install
+```
 
-> To be determined
+Start Expo:
+
+```bash
+npm start
+```
+
+Run a platform target:
+
+```bash
+npm run ios
+npm run android
+npm run web
+```
+
+Run checks:
+
+```bash
+npm run typecheck
+npx jest --watchAll=false
+```
