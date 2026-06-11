@@ -16,6 +16,7 @@ import { TodayFitnessCard } from '../../components/today/TodayFitnessCard';
 import { TodayHabitRow } from '../../components/today/TodayHabitRow';
 import { TodayHabitSummary } from '../../components/today/TodayHabitSummary';
 import { TodayCheckInSheet } from '../../components/today/TodayCheckInSheet';
+import { TodayCalendarSheet } from '../../components/today/TodayCalendarSheet';
 import { TodayQuickActionRow } from '../../components/today/TodayQuickActionRow';
 import { TodaySection } from '../../components/today/TodaySection';
 import { TodayTallySheet } from '../../components/today/TodayTallySheet';
@@ -31,6 +32,7 @@ import type {
   TodayQuickAction,
   TodayViewModel,
 } from '../../types/today';
+import { useUserStore } from '../../store/userStore';
 import {
   hasTodayCheckIn,
   saveTodayCheckInByDate,
@@ -45,7 +47,11 @@ import {
 } from '../../utils/todayTally';
 
 export default function TodayScreen() {
+  const weekStartDay = useUserStore(
+    (state) => state.preferences?.weekStartDay ?? 0
+  );
   const [viewModel, setViewModel] = useState<TodayViewModel | null>(null);
+  const [selectedDateOverride, setSelectedDateOverride] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,13 +60,16 @@ export default function TodayScreen() {
   const [checkInSheetVisible, setCheckInSheetVisible] = useState(false);
   const [tallyLogsByDate, setTallyLogsByDate] = useState<TodayTallyLogsByDate>({});
   const [tallySheetVisible, setTallySheetVisible] = useState(false);
+  const [calendarSheetVisible, setCalendarSheetVisible] = useState(false);
 
   const loadToday = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     setError(null);
 
     try {
-      const nextViewModel = await getTodayViewModel();
+      const nextViewModel = await getTodayViewModel(
+        selectedDateOverride ? { selectedDate: selectedDateOverride } : undefined
+      );
       setViewModel(nextViewModel);
     } catch (err) {
       console.error('Failed to load Today view model:', err);
@@ -69,7 +78,7 @@ export default function TodayScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedDateOverride]);
 
   useEffect(() => {
     void loadToday();
@@ -150,6 +159,14 @@ export default function TodayScreen() {
         setTallySheetVisible(true);
         break;
     }
+  }, []);
+
+  const handleCalendarClose = useCallback(() => {
+    setCalendarSheetVisible(false);
+  }, []);
+
+  const handleCalendarDateSelect = useCallback((date: string) => {
+    setSelectedDateOverride(date);
   }, []);
 
   const handleCheckInClose = useCallback(() => {
@@ -258,7 +275,11 @@ export default function TodayScreen() {
 
   return (
     <View style={styles.container}>
-      <TodayHeader title={today?.title ?? 'Today'} subtitle={today?.subtitle ?? ''} />
+      <TodayHeader
+        title={today?.title ?? 'Today'}
+        subtitle={today?.subtitle ?? ''}
+        onDatePress={() => setCalendarSheetVisible(true)}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -326,17 +347,52 @@ export default function TodayScreen() {
         onIncrement={handleTallyIncrement}
         onUndoIncrement={handleTallyUndoIncrement}
       />
+      <TodayCalendarSheet
+        visible={calendarSheetVisible}
+        selectedDate={selectedDate}
+        weekStartDay={weekStartDay}
+        onClose={handleCalendarClose}
+        onSelectDate={handleCalendarDateSelect}
+      />
     </View>
   );
 }
 
-function TodayHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function TodayHeader({
+  title,
+  subtitle,
+  onDatePress,
+}: {
+  title: string;
+  subtitle: string;
+  onDatePress?: () => void;
+}) {
   return (
     <View style={styles.header}>
       <View style={styles.headerSide} />
       <View style={styles.headerText}>
         <Text style={styles.title}>{title}</Text>
-        {subtitle.length > 0 && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle.length > 0 && onDatePress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Choose Today date"
+            hitSlop={8}
+            onPress={onDatePress}
+            style={({ pressed }) => [
+              styles.dateButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Ionicons
+              name="chevron-down"
+              size={13}
+              color={colors.textSecondaryLight}
+            />
+          </Pressable>
+        ) : (
+          subtitle.length > 0 && <Text style={styles.subtitle}>{subtitle}</Text>
+        )}
       </View>
       <Pressable
         onPress={() => router.push('/settings')}
@@ -385,6 +441,14 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.textSecondaryLight,
   },
+  dateButton: {
+    minHeight: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: 6,
+  },
   settingsButton: {
     width: 32,
     height: 32,
@@ -415,5 +479,8 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: typography.size.base,
     color: colors.textSecondaryLight,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });
