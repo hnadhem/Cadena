@@ -1,9 +1,14 @@
 import { describe, expect, it, beforeEach, jest } from '@jest/globals';
-import { AppMode, EnabledModule } from '../../constants/enums';
+import { AppMode, EnabledModule, FrequencyType } from '../../constants/enums';
 import { useHabitStore } from '../../store/habitStore';
-import type { Habit, HabitLog, UserPreferences } from '../../types/schema';
+import type { Habit, HabitLog, HabitTarget, UserPreferences } from '../../types/schema';
 import { getDb } from '../db';
-import { getTodayViewModel } from '../todayService';
+import {
+  completeTodayHabit,
+  getTodayViewModel,
+  saveTodayHabitValue,
+  undoTodayHabitCompletion,
+} from '../todayService';
 
 jest.mock('../db', () => ({
   getDb: jest.fn(),
@@ -65,6 +70,32 @@ function habitLog(overrides: Partial<HabitLog>): HabitLog {
   };
 }
 
+function habitTarget(overrides: Partial<HabitTarget>): HabitTarget {
+  return {
+    id: overrides.id ?? 'target-id',
+    habitId: overrides.habitId ?? 'habit-id',
+    frequencyType: overrides.frequencyType ?? FrequencyType.DAILY,
+    timesPerDay: overrides.timesPerDay,
+    intervalDays: overrides.intervalDays,
+    daysOfWeek: overrides.daysOfWeek,
+    timesPerWeek: overrides.timesPerWeek,
+    intervalWeeks: overrides.intervalWeeks,
+    timesPerMonth: overrides.timesPerMonth,
+    daysOfMonth: overrides.daysOfMonth,
+    timesPerYear: overrides.timesPerYear,
+    scheduledTime: overrides.scheduledTime,
+    weekStartDay: overrides.weekStartDay ?? 0,
+    habitType: overrides.habitType ?? 'binary',
+    targetValue: overrides.targetValue,
+    targetUnit: overrides.targetUnit,
+    directionality: overrides.directionality,
+    streakCompletionThreshold: overrides.streakCompletionThreshold,
+    autoCompleteThreshold: overrides.autoCompleteThreshold,
+    effectiveFrom: overrides.effectiveFrom ?? '2026-05-01',
+    createdAt: overrides.createdAt ?? '2026-05-01T12:00:00',
+  };
+}
+
 function mockPersistedFitnessRows(workoutRows: unknown[], cardioRows: unknown[]) {
   const getAllAsync = jest.fn<(...args: unknown[]) => Promise<unknown[]>>();
   getAllAsync.mockResolvedValueOnce(workoutRows);
@@ -75,7 +106,7 @@ function mockPersistedFitnessRows(workoutRows: unknown[], cardioRows: unknown[])
 
 describe('todayService', () => {
   beforeEach(() => {
-    useHabitStore.setState({ habits: [], todayLogs: [] });
+    useHabitStore.setState({ habits: [], todayLogs: [], habitTargets: [] });
     mockGetDb.mockReset();
   });
 
@@ -134,6 +165,132 @@ describe('todayService', () => {
       ['pending', 'missed'],
       ['completed', 'completed'],
     ]);
+  });
+
+  it('adds target, schedule, value, and streak metadata to habit items', async () => {
+    useHabitStore.getState().loadHabits(
+      [habit({ id: 'water', name: 'Water' })],
+      [
+        habitLog({
+          id: 'water-log-1',
+          habitId: 'water',
+          date: '2026-05-06',
+          completed: true,
+          value: 64,
+        }),
+        habitLog({
+          id: 'water-log-2',
+          habitId: 'water',
+          date: '2026-05-07',
+          completed: true,
+          value: 72,
+          completedAt: '2026-05-07T09:00:00',
+        }),
+      ],
+      [
+        habitTarget({
+          id: 'water-target',
+          habitId: 'water',
+          habitType: 'measurable',
+          targetValue: 64,
+          targetUnit: 'oz',
+          scheduledTime: '08:00',
+        }),
+      ]
+    );
+
+    const viewModel = await getTodayViewModel({
+      selectedDate: '2026-05-07',
+      currentDate: '2026-05-07T12:00:00',
+      userId: null,
+      preferences: preferences(),
+    });
+
+    expect(viewModel.habitItems).toEqual([
+      expect.objectContaining({
+        habitId: 'water',
+        status: 'completed',
+        habitType: 'measurable',
+        scheduledTime: '08:00',
+        value: 72,
+        targetValue: 64,
+        targetUnit: 'oz',
+        streakCount: 2,
+      }),
+    ]);
+  });
+
+  it('completes a binary habit and supports undoing the new log', () => {
+    useHabitStore.getState().loadHabits([habit({ id: 'walk' })], []);
+
+    const result = completeTodayHabit('walk', '2026-05-07', '2026-05-07T08:00:00');
+
+    expect(result).toEqual({
+      ok: true,
+      log: expect.objectContaining({
+        habitId: 'walk',
+        date: '2026-05-07',
+        completed: true,
+        completedAt: '2026-05-07T08:00:00',
+      }),
+    });
+
+    const logId = result.ok ? result.log.id : '';
+    expect(useHabitStore.getState().todayLogs).toHaveLength(1);
+
+    expect(undoTodayHabitCompletion(logId)).toEqual({ ok: true, logId });
+    expect(useHabitStore.getState().todayLogs).toHaveLength(0);
+  });
+
+  it('saves measurable habit values and completes them only when the target is met', () => {
+    useHabitStore.getState().loadHabits(
+      [habit({ id: 'water' })],
+      [],
+      [
+        habitTarget({
+          id: 'water-target',
+          habitId: 'water',
+          habitType: 'measurable',
+          targetValue: 64,
+          targetUnit: 'oz',
+        }),
+      ]
+    );
+
+    const partialResult = saveTodayHabitValue(
+      'water',
+      '2026-05-07',
+      32,
+      '2026-05-07T08:00:00'
+    );
+
+    expect(partialResult).toEqual({
+      ok: true,
+      log: expect.objectContaining({
+        habitId: 'water',
+        completed: false,
+        value: 32,
+        completedAt: undefined,
+      }),
+    });
+
+    const completeResult = saveTodayHabitValue(
+      'water',
+      '2026-05-07',
+      64,
+      '2026-05-07T09:00:00'
+    );
+
+    expect(completeResult).toEqual({
+      ok: true,
+      log: expect.objectContaining({
+        habitId: 'water',
+        completed: true,
+        value: 64,
+        completedAt: '2026-05-07T09:00:00',
+      }),
+    });
+    expect(useHabitStore.getState().todayLogs).toHaveLength(1);
   });
 
   it('uses module preferences when composing quick actions', async () => {

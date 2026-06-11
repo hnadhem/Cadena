@@ -15,6 +15,7 @@ import type { RelativePathString } from 'expo-router';
 import { TodayFitnessCard } from '../../components/today/TodayFitnessCard';
 import { TodayHabitRow } from '../../components/today/TodayHabitRow';
 import { TodayHabitSummary } from '../../components/today/TodayHabitSummary';
+import { TodayHabitValueSheet } from '../../components/today/TodayHabitValueSheet';
 import { TodayCheckInSheet } from '../../components/today/TodayCheckInSheet';
 import { TodayCalendarSheet } from '../../components/today/TodayCalendarSheet';
 import { TodayQuickActionRow } from '../../components/today/TodayQuickActionRow';
@@ -23,12 +24,16 @@ import { TodayTallySheet } from '../../components/today/TodayTallySheet';
 import { Button } from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../constants/theme';
 import {
+  completeTodayHabit,
   getTodayViewModel,
   moveTodayFitnessSessionToTomorrow,
+  saveTodayHabitValue,
   skipTodayFitnessSession,
+  undoTodayHabitCompletion,
 } from '../../services/todayService';
 import type {
   TodayFitnessItem,
+  TodayHabitItem,
   TodayQuickAction,
   TodayViewModel,
 } from '../../types/today';
@@ -46,6 +51,14 @@ import {
   type TodayTallyLogsByDate,
 } from '../../utils/todayTally';
 
+const HABIT_UNDO_WINDOW_MS = 5000;
+
+interface HabitUndoState {
+  logId: string;
+  habitTitle: string;
+  expiresAt: number;
+}
+
 export default function TodayScreen() {
   const weekStartDay = useUserStore(
     (state) => state.preferences?.weekStartDay ?? 0
@@ -61,6 +74,10 @@ export default function TodayScreen() {
   const [tallyLogsByDate, setTallyLogsByDate] = useState<TodayTallyLogsByDate>({});
   const [tallySheetVisible, setTallySheetVisible] = useState(false);
   const [calendarSheetVisible, setCalendarSheetVisible] = useState(false);
+  const [habitValueItem, setHabitValueItem] = useState<TodayHabitItem | null>(null);
+  const [habitUndo, setHabitUndo] = useState<HabitUndoState | null>(null);
+  const [habitUndoNow, setHabitUndoNow] = useState(() => Date.now());
+  const habitUndoExpiresAt = habitUndo?.expiresAt;
 
   const loadToday = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -83,6 +100,23 @@ export default function TodayScreen() {
   useEffect(() => {
     void loadToday();
   }, [loadToday]);
+
+  useEffect(() => {
+    if (habitUndoExpiresAt === undefined) return undefined;
+
+    setHabitUndoNow(Date.now());
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setHabitUndoNow(now);
+      setHabitUndo((currentUndo) => {
+        if (!currentUndo || now < currentUndo.expiresAt) return currentUndo;
+        return null;
+      });
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [habitUndoExpiresAt]);
 
   const refreshToday = useCallback(() => {
     setRefreshing(true);
@@ -143,6 +177,111 @@ export default function TodayScreen() {
 
     router.push(sessionRoute);
   }, []);
+
+  const showHabitUndo = useCallback((logId: string, habitTitle: string) => {
+    setHabitUndo({
+      logId,
+      habitTitle,
+      expiresAt: Date.now() + HABIT_UNDO_WINDOW_MS,
+    });
+  }, []);
+
+  const handleHabitClear = useCallback(
+    async (item: TodayHabitItem) => {
+      const result = undoTodayHabitCompletion(item.id);
+
+      if (!result.ok) {
+        Alert.alert('Could not clear habit', result.message);
+        return;
+      }
+
+      setHabitUndo(null);
+      await loadToday(false);
+    },
+    [loadToday]
+  );
+
+  const handleHabitPress = useCallback(
+    async (item: TodayHabitItem) => {
+      if (item.habitType === 'measurable') {
+        setHabitValueItem(item);
+        return;
+      }
+
+      if (item.status === 'completed') {
+        Alert.alert(item.title, 'Habit is marked done.', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Clear',
+            style: 'destructive',
+            onPress: () => {
+              void handleHabitClear(item);
+            },
+          },
+        ]);
+        return;
+      }
+
+      const selectedDate = viewModel?.selectedDate;
+      if (!selectedDate) return;
+
+      const result = completeTodayHabit(item.habitId, selectedDate);
+
+      if (!result.ok) {
+        Alert.alert('Could not complete habit', result.message);
+        return;
+      }
+
+      showHabitUndo(result.log.id, item.title);
+      await loadToday(false);
+    },
+    [handleHabitClear, loadToday, showHabitUndo, viewModel?.selectedDate]
+  );
+
+  const handleHabitValueClose = useCallback(() => {
+    setHabitValueItem(null);
+  }, []);
+
+  const handleHabitValueSave = useCallback(
+    async (value: number) => {
+      const selectedDate = viewModel?.selectedDate;
+      const item = habitValueItem;
+      if (!selectedDate || !item) return;
+
+      const result = saveTodayHabitValue(item.habitId, selectedDate, value);
+
+      if (!result.ok) {
+        Alert.alert('Could not save habit value', result.message);
+        return;
+      }
+
+      setHabitValueItem(null);
+
+      if (result.log.completed) {
+        showHabitUndo(result.log.id, item.title);
+      } else {
+        setHabitUndo(null);
+      }
+
+      await loadToday(false);
+    },
+    [habitValueItem, loadToday, showHabitUndo, viewModel?.selectedDate]
+  );
+
+  const handleHabitUndo = useCallback(async () => {
+    if (!habitUndo) return;
+
+    const result = undoTodayHabitCompletion(habitUndo.logId);
+
+    if (!result.ok) {
+      Alert.alert('Could not undo habit', result.message);
+      setHabitUndo(null);
+      return;
+    }
+
+    setHabitUndo(null);
+    await loadToday(false);
+  }, [habitUndo, loadToday]);
 
   const handleQuickActionPress = useCallback((action: TodayQuickAction) => {
     switch (action.kind) {
@@ -310,14 +449,23 @@ export default function TodayScreen() {
         </TodaySection>
 
         <TodaySection title="Habits">
+          {habitUndo && (
+            <HabitUndoBar
+              habitTitle={habitUndo.habitTitle}
+              secondsRemaining={Math.max(
+                0,
+                Math.ceil((habitUndo.expiresAt - habitUndoNow) / 1000)
+              )}
+              onUndo={handleHabitUndo}
+            />
+          )}
           <TodayHabitSummary
             completedHabitCount={today?.completedHabitCount ?? 0}
             totalVisibleHabitCount={today?.totalVisibleHabitCount ?? 0}
           />
           {today && today.habitItems.length > 0 ? (
             today.habitItems.map((item) => (
-              // TODO: Pass onPress when persisted habit completion/edit/value flows exist.
-              <TodayHabitRow key={item.id} item={item} />
+              <TodayHabitRow key={item.id} item={item} onPress={handleHabitPress} />
             ))
           ) : (
             <Text style={styles.emptyText}>No visible habits for this day.</Text>
@@ -347,6 +495,12 @@ export default function TodayScreen() {
         onIncrement={handleTallyIncrement}
         onUndoIncrement={handleTallyUndoIncrement}
       />
+      <TodayHabitValueSheet
+        visible={Boolean(habitValueItem)}
+        item={habitValueItem}
+        onClose={handleHabitValueClose}
+        onSave={handleHabitValueSave}
+      />
       <TodayCalendarSheet
         visible={calendarSheetVisible}
         selectedDate={selectedDate}
@@ -354,6 +508,37 @@ export default function TodayScreen() {
         onClose={handleCalendarClose}
         onSelectDate={handleCalendarDateSelect}
       />
+    </View>
+  );
+}
+
+function HabitUndoBar({
+  habitTitle,
+  secondsRemaining,
+  onUndo,
+}: {
+  habitTitle: string;
+  secondsRemaining: number;
+  onUndo: () => void;
+}) {
+  return (
+    <View style={styles.habitUndoBar}>
+      <Text style={styles.habitUndoText} numberOfLines={1}>
+        {habitTitle} completed
+      </Text>
+      <Text style={styles.habitUndoCount}>{secondsRemaining}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Undo ${habitTitle} completion`}
+        hitSlop={8}
+        onPress={onUndo}
+        style={({ pressed }) => [
+          styles.habitUndoButton,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Ionicons name="arrow-undo-outline" size={20} color={colors.textPrimaryLight} />
+      </Pressable>
     </View>
   );
 }
@@ -479,6 +664,37 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: typography.size.base,
     color: colors.textSecondaryLight,
+  },
+  habitUndoBar: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    paddingHorizontal: spacing[3],
+    borderRadius: 10,
+    backgroundColor: colors.neutral100,
+  },
+  habitUndoText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimaryLight,
+  },
+  habitUndoCount: {
+    minWidth: 16,
+    textAlign: 'right',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
+    color: colors.textTertiaryLight,
+    fontVariant: ['tabular-nums'],
+  },
+  habitUndoButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
   },
   pressed: {
     opacity: 0.7,

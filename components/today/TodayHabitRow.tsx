@@ -25,6 +25,7 @@ const STATUS_STATES: Record<TodayHabitStatus, CompletionState> = {
 
 export function TodayHabitRow({ item, onPress }: TodayHabitRowProps) {
   const completed = item.status === 'completed';
+  const metaParts = getMetaParts(item);
 
   return (
     <Pressable
@@ -45,12 +46,61 @@ export function TodayHabitRow({ item, onPress }: TodayHabitRowProps) {
         />
       </View>
       <View style={styles.body}>
-        <Text style={[styles.title, completed && styles.completedText]}>{item.title}</Text>
-        {item.scheduledTime && <Text style={styles.meta}>{item.scheduledTime}</Text>}
+        <Text style={[styles.title, completed && styles.completedText]} numberOfLines={1}>
+          {item.title}
+        </Text>
+        {metaParts.length > 0 && (
+          <Text style={styles.meta} numberOfLines={1}>
+            {metaParts.join(' · ')}
+          </Text>
+        )}
       </View>
+      {item.streakCount !== undefined && item.streakCount > 0 && (
+        <View style={styles.streakBadge}>
+          <Ionicons name="flame-outline" size={13} color={colors.textSecondaryLight} />
+          <Text style={styles.streakText}>{item.streakCount}</Text>
+        </View>
+      )}
       <Badge label={STATUS_LABELS[item.status]} state={STATUS_STATES[item.status]} />
     </Pressable>
   );
+}
+
+function getMetaParts(item: TodayHabitItem): string[] {
+  const parts: string[] = [];
+
+  if (item.scheduledTime) {
+    parts.push(item.scheduledTime);
+  }
+
+  const valueLabel = formatValueLabel(item);
+  if (valueLabel) {
+    parts.push(valueLabel);
+  }
+
+  return parts;
+}
+
+function formatValueLabel(item: TodayHabitItem): string | null {
+  const unit = item.targetUnit ? ` ${item.targetUnit}` : '';
+
+  if (item.value !== undefined && item.targetValue !== undefined) {
+    return `${formatNumber(item.value)} / ${formatNumber(item.targetValue)}${unit}`;
+  }
+
+  if (item.value !== undefined) {
+    return `${formatNumber(item.value)}${unit}`;
+  }
+
+  if (item.targetValue !== undefined) {
+    return `Goal ${formatNumber(item.targetValue)}${unit}`;
+  }
+
+  return null;
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 const styles = StyleSheet.create({
@@ -89,6 +139,7 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     gap: spacing[1],
+    minWidth: 0,
   },
   title: {
     fontSize: typography.size.base,
@@ -101,5 +152,22 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: typography.size.sm,
     color: colors.textSecondaryLight,
+  },
+  streakBadge: {
+    minWidth: 34,
+    minHeight: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: radius.md,
+    backgroundColor: colors.neutral100,
+  },
+  streakText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: colors.textSecondaryLight,
+    fontVariant: ['tabular-nums'],
   },
 });

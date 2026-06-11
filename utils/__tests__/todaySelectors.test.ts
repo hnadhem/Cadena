@@ -14,6 +14,7 @@ function habit(overrides: Partial<TodayHabitItem>): TodayHabitItem {
     habitId: overrides.habitId ?? overrides.id ?? 'habit-id',
     title: overrides.title ?? 'Habit',
     status: overrides.status ?? 'pending',
+    habitType: overrides.habitType ?? 'binary',
     displayOrder: overrides.displayOrder ?? 0,
     scheduledTime: overrides.scheduledTime,
     completedAt: overrides.completedAt,
@@ -21,6 +22,7 @@ function habit(overrides: Partial<TodayHabitItem>): TodayHabitItem {
     value: overrides.value,
     targetValue: overrides.targetValue,
     targetUnit: overrides.targetUnit,
+    streakCount: overrides.streakCount,
   };
 }
 

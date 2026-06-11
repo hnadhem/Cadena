@@ -17,6 +17,7 @@ export interface TodayFitnessItem {
 }
 
 export type TodayHabitStatus = 'pending' | 'completed' | 'missed';
+export type TodayHabitType = 'binary' | 'measurable';
 
 export interface TodayHabitItem {
   id: string;
@@ -24,12 +25,14 @@ export interface TodayHabitItem {
   title: string;
   subtitle?: string;
   status: TodayHabitStatus;
+  habitType: TodayHabitType;
   displayOrder: number;
   scheduledTime?: string;
   completedAt?: string;
   value?: number;
   targetValue?: number;
   targetUnit?: string;
+  streakCount?: number;
 }
 
 export type TodayQuickActionKind = 'checkIn' | 'nutrition' | 'medication' | 'tally';
