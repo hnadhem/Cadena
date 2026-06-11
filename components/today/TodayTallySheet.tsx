@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '../ui/Button';
 import { colors, radius, spacing, typography } from '../../constants/theme';
 import {
   TODAY_TALLY_VISIBLE_LIMIT,
@@ -92,6 +91,8 @@ export function TodayTallySheet({
         />
 
         <View style={styles.sheet}>
+          <View style={styles.grabber} />
+
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Tally</Text>
@@ -109,44 +110,57 @@ export function TodayTallySheet({
           </View>
 
           <ScrollView contentContainerStyle={styles.content}>
-            {visibleRows.map((row) => (
-              <TallyRow
-                key={row.item.id}
-                row={row}
-                onIncrement={handleIncrement}
-              />
-            ))}
+            <View style={styles.rowList}>
+              {visibleRows.map((row, index) => (
+                <TallyRow
+                  key={row.item.id}
+                  row={row}
+                  first={index === 0}
+                  onIncrement={handleIncrement}
+                />
+              ))}
 
-            {!showAllItems && hiddenCount > 0 && (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setShowAllItems(true)}
-                style={({ pressed }) => [
-                  styles.showMoreButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.showMoreText}>Show {hiddenCount} more</Text>
-                <Ionicons name="chevron-down" size={16} color={colors.brand600} />
-              </Pressable>
-            )}
+              {hiddenCount > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showAllItems }}
+                  onPress={() => setShowAllItems((showAll) => !showAll)}
+                  style={({ pressed }) => [
+                    styles.showMoreButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAllItems ? 'Show fewer' : `Show ${hiddenCount} more`}
+                  </Text>
+                  <Ionicons
+                    name={showAllItems ? 'chevron-up' : 'chevron-down'}
+                    size={15}
+                    color={colors.textTertiaryLight}
+                  />
+                </Pressable>
+              )}
+            </View>
           </ScrollView>
 
-          {lastIncrement && (
-            <View style={styles.undoPill}>
-              <Text style={styles.undoText}>Added 1 to {lastIncrement.itemName}</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleUndo}
-                hitSlop={8}
-              >
-                <Text style={styles.undoButtonText}>Undo</Text>
-              </Pressable>
-            </View>
-          )}
-
-          <View style={styles.footer}>
-            <Button label="Close" onPress={onClose} variant="secondary" />
+          <View style={styles.undoPillBar}>
+            {lastIncrement && (
+              <View style={styles.undoPill}>
+                <Text style={styles.undoText}>
+                  Added 1 to {lastIncrement.itemName}
+                </Text>
+                <Text style={styles.undoSeparator}>|</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Undo ${lastIncrement.itemName} tally increment`}
+                  onPress={handleUndo}
+                  hitSlop={8}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  <Text style={styles.undoButtonText}>Undo</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -156,9 +170,11 @@ export function TodayTallySheet({
 
 function TallyRow({
   row,
+  first,
   onIncrement,
 }: {
   row: TodayTallyRow;
+  first: boolean;
   onIncrement: (row: TodayTallyRow) => void;
 }) {
   const unitLabel = row.item.unit ? ` ${row.item.unit}` : '';
@@ -167,48 +183,51 @@ function TallyRow({
   const progressPercent = getTodayTallyProgressPercent(row.log.count, target);
 
   return (
-    <View style={styles.row}>
-      <View style={styles.rowHeader}>
-        <View style={styles.rowTitleGroup}>
-          <Text style={styles.itemName}>{row.item.name}</Text>
+    <View style={[styles.row, first && styles.firstRow]}>
+      <View style={styles.rowBody}>
+        <View style={styles.rowHead}>
+          <Text style={styles.itemName} numberOfLines={1}>
+            {row.item.name}
+          </Text>
           <Text style={styles.periodLabel}>{row.item.periodLabel}</Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Add one to ${row.item.name}`}
-          onPress={() => onIncrement(row)}
-          style={({ pressed }) => [
-            styles.plusButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Ionicons name="add" size={22} color={colors.white} />
-        </Pressable>
-      </View>
 
-      <View style={styles.countLine}>
-        <Text style={styles.countText}>
-          {formatNumber(row.log.count)}
-          {unitLabel}
-        </Text>
-        {hasTarget && (
-          <Text style={styles.targetText}>
-            Goal {formatNumber(target)}
-            {unitLabel}
-          </Text>
+        <View style={styles.countLine}>
+          <Text style={styles.countText}>{formatNumber(row.log.count)}</Text>
+          {row.item.unit && <Text style={styles.unitText}>{row.item.unit}</Text>}
+          {hasTarget && (
+            <Text style={styles.targetText}>
+              Goal {formatNumber(target)}
+              {unitLabel}
+            </Text>
+          )}
+        </View>
+
+        {hasTarget ? (
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${progressPercent}%` },
+              ]}
+            />
+          </View>
+        ) : (
+          <View style={[styles.progressTrack, styles.progressTrackGhost]} />
         )}
       </View>
 
-      {hasTarget && (
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${progressPercent}%` },
-            ]}
-          />
-        </View>
-      )}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Add one to ${row.item.name}`}
+        onPress={() => onIncrement(row)}
+        style={({ pressed }) => [
+          styles.plusButton,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Ionicons name="add" size={24} color={colors.textSecondaryLight} />
+      </Pressable>
     </View>
   );
 }
@@ -228,12 +247,23 @@ const styles = StyleSheet.create({
   },
   sheet: {
     maxHeight: '88%',
-    gap: spacing[4],
-    padding: spacing[4],
-    paddingBottom: spacing[5],
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[4],
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
+    borderWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 0,
+    borderColor: colors.borderLight,
     backgroundColor: colors.surfaceLight,
+  },
+  grabber: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    marginBottom: spacing[3],
+    borderRadius: radius.full,
+    backgroundColor: colors.neutral300,
   },
   header: {
     minHeight: 44,
@@ -261,27 +291,38 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral100,
   },
   content: {
-    gap: spacing[3],
+    paddingTop: spacing[3],
+  },
+  rowList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
   },
   row: {
-    gap: spacing[3],
-    padding: spacing[3],
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.neutral50,
-  },
-  rowHeader: {
+    minHeight: 92,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing[3],
+    gap: spacing[4],
+    paddingVertical: spacing[4],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
   },
-  rowTitleGroup: {
+  firstRow: {
+    borderTopWidth: 0,
+  },
+  rowBody: {
     flex: 1,
-    gap: spacing[1],
+    minWidth: 0,
+    gap: spacing[2],
+  },
+  rowHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing[2],
   },
   itemName: {
+    flex: 1,
+    minWidth: 0,
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
     color: colors.textPrimaryLight,
@@ -291,81 +332,96 @@ const styles = StyleSheet.create({
     color: colors.textSecondaryLight,
   },
   plusButton: {
-    width: 36,
-    height: 36,
+    flexShrink: 0,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.full,
-    backgroundColor: colors.brand600,
+    borderRadius: radius.md,
+    backgroundColor: colors.neutral100,
   },
   countLine: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing[3],
+    gap: spacing[1],
   },
   countText: {
-    fontSize: typography.size.lg,
+    fontSize: typography.size['2xl'],
     fontWeight: typography.weight.bold,
     color: colors.textPrimaryLight,
+    fontVariant: ['tabular-nums'],
+  },
+  unitText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.textTertiaryLight,
   },
   targetText: {
-    flexShrink: 1,
+    marginLeft: spacing[1],
     fontSize: typography.size.sm,
-    color: colors.textSecondaryLight,
-    textAlign: 'right',
+    fontWeight: typography.weight.medium,
+    color: colors.textTertiaryLight,
   },
   progressTrack: {
-    height: 6,
+    height: 4,
     overflow: 'hidden',
     borderRadius: radius.full,
     backgroundColor: colors.neutral200,
   },
+  progressTrackGhost: {
+    opacity: 0.45,
+  },
   progressFill: {
     height: '100%',
     borderRadius: radius.full,
-    backgroundColor: colors.brand600,
+    backgroundColor: colors.neutral800,
   },
   showMoreButton: {
-    minHeight: 40,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing[1],
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surfaceLight,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
   },
   showMoreText: {
     fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
-    color: colors.brand600,
+    fontWeight: typography.weight.medium,
+    color: colors.textTertiaryLight,
+  },
+  undoPillBar: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   undoPill: {
-    minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing[3],
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
+    maxWidth: '100%',
+    paddingLeft: spacing[4],
+    paddingRight: spacing[1],
+    paddingVertical: spacing[1],
     borderRadius: radius.full,
-    backgroundColor: colors.neutral100,
+    backgroundColor: colors.textPrimaryLight,
   },
   undoText: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: typography.size.sm,
-    color: colors.textSecondaryLight,
+    fontWeight: typography.weight.medium,
+    color: colors.white,
+  },
+  undoSeparator: {
+    marginHorizontal: spacing[2],
+    fontSize: typography.size.sm,
+    color: 'rgba(255, 255, 255, 0.35)',
   },
   undoButtonText: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
     fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
-    color: colors.brand600,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    fontWeight: typography.weight.medium,
+    color: 'rgba(255, 255, 255, 0.72)',
   },
   pressed: {
     opacity: 0.75,
