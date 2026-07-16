@@ -12,7 +12,7 @@ habIt is currently in active development. The Figma prototype shows the intended
 
 | Asset | Link |
 |---|---|
-| Demo video | [Watch demo](docs/demo.mp4) |
+| Demo video | [Watch demo](https://raw.githubusercontent.com/hnadhem/habIt/main/docs/demo.mp4) |
 | Figma prototype | [View prototype](https://www.figma.com/design/GjeSAk79x2gZBlPbHpy1ZV/habIt?node-id=440-18136&t=FvSVJmJxfxeYcbXJ-1) |
 
 ### Demo video
