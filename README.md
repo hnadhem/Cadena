@@ -4,15 +4,46 @@
 
 HabIt is an in-progress Expo/React Native mobile app for daily habit tracking, fitness planning, and lightweight personal check-ins. It is being built as a local-first product centered on a single Today view.
 
-## Demo / Screenshots
+## Demo / Design
 
-No demo assets are included yet.
+habIt is currently in active development. The Figma prototype shows the intended product flow, screen structure, and interaction model.
 
-| Asset | Status |
-| --- | --- |
-| Short GIF/video | Planned |
-| Static mobile screenshots | Planned |
-| Figma/design link | Optional; not currently included |
+### Links
+
+| Asset | Link |
+|---|---|
+| Demo video | [Watch demo](docs/demo.mp4) |
+| Figma prototype | [View prototype](https://www.figma.com/design/GjeSAk79x2gZBlPbHpy1ZV/habIt?node-id=440-18136&t=FvSVJmJxfxeYcbXJ-1) |
+
+### Demo video
+
+<p align="center">
+  <a href="docs/demo.mp4">
+    <img src="docs/demo-poster.png" width="250" alt="Play HabIt demo video" />
+  </a>
+</p>
+
+### Screen previews
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="33%">
+      <img src="docs/screenshots/today.png" width="250" alt="Today screen" />
+      <br />
+      <sub>Today</sub>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <img src="docs/screenshots/workout-logging.png" width="250" alt="Workout logging screen" />
+      <br />
+      <sub>Workout logging</sub>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <img src="docs/screenshots/check-in-sheet.png" width="250" alt="Check-in sheet" />
+      <br />
+      <sub>Check-in sheet</sub>
+    </td>
+  </tr>
+</table>
 
 ## Core Features
 
