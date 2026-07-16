@@ -18,7 +18,7 @@ habIt is currently in active development. The Figma prototype shows the intended
 ### Demo video
 
 <p align="center">
-  <a href="docs/demo.mp4">
+  <a href="https://raw.githubusercontent.com/hnadhem/habIt/main/docs/demo.mp4">
     <img src="docs/demo-poster.png" width="250" alt="Play HabIt demo video" />
   </a>
 </p>
