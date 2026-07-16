@@ -1,25 +1,25 @@
-# HabIt
+# Cadena
 
 ## Overview
 
-HabIt is an in-progress Expo/React Native mobile app for daily habit tracking, fitness planning, and lightweight personal check-ins. It is being built as a local-first product centered on a single Today view.
+Cadena is an in-progress Expo/React Native mobile app for daily habit tracking, fitness planning, and lightweight personal check-ins. It is being built as a local-first product centered on a single Today view.
 
 ## Demo / Design
 
-habIt is currently in active development. The Figma prototype shows the intended product flow, screen structure, and interaction model.
+Cadena is currently in active development. The Figma prototype shows the intended product flow, screen structure, and interaction model.
 
 ### Links
 
 | Asset | Link |
 |---|---|
-| Demo video | [Watch demo](https://raw.githubusercontent.com/hnadhem/habIt/main/docs/demo.mp4) |
+| Demo video | [Watch demo](https://raw.githubusercontent.com/hnadhem/Cadena/main/docs/demo.mp4) |
 | Figma prototype | [View prototype](https://www.figma.com/design/GjeSAk79x2gZBlPbHpy1ZV/habIt?node-id=440-18136&t=FvSVJmJxfxeYcbXJ-1) |
 
 ### Demo video
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/hnadhem/habIt/main/docs/demo.mp4">
-    <img src="docs/demo-poster.png" width="250" alt="Play HabIt demo video" />
+  <a href="https://raw.githubusercontent.com/hnadhem/Cadena/main/docs/demo.mp4">
+    <img src="docs/demo-poster.png" width="250" alt="Play Cadena demo video" />
   </a>
 </p>
 
@@ -79,7 +79,7 @@ habIt is currently in active development. The Figma prototype shows the intended
 
 ## Current Status
 
-HabIt is under active development and is not complete or release-ready.
+Cadena is under active development and is not complete or release-ready.
 
 Built:
 

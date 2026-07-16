@@ -1,8 +1,8 @@
-# AGENTS.md - HabIt Agent Guide
+# AGENTS.md - Cadena Agent Guide
 
 ## Purpose
 
-This file is the shared project guide for coding agents working in HabIt. Codex reads it automatically. Claude Code imports it from `CLAUDE.md`.
+This file is the shared project guide for coding agents working in Cadena. Codex reads it automatically. Claude Code imports it from `CLAUDE.md`.
 
 Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`, `.claude/`, `.codex/`, or repo skills.
 

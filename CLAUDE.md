@@ -1,4 +1,4 @@
-# CLAUDE.md — HabIt Project
+# CLAUDE.md — Cadena Project
 
 @AGENTS.md
 

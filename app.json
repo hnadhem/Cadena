@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "habIt",
-    "slug": "habit",
+    "name": "Cadena",
+    "slug": "cadena",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "habit",
+    "scheme": "cadena",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
@@ -15,14 +15,14 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.habit.app"
+      "bundleIdentifier": "com.cadena.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.habit.app"
+      "package": "com.cadena.app"
     },
     "web": {
       "bundler": "metro",
