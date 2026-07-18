@@ -594,8 +594,8 @@ const migrations: Migration[] = [
   },
 ];
 
-export async function runMigrations(): Promise<void> {
-  const db = await SQLite.openDatabaseAsync('habit.db');
+export async function runMigrations(databaseName = 'habit.db'): Promise<void> {
+  const db = await SQLite.openDatabaseAsync(databaseName);
   _db = db;
 
   await db.execAsync('PRAGMA journal_mode = WAL;');

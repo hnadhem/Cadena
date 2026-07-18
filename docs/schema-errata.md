@@ -23,3 +23,10 @@ No future schema decision is pending for this ambiguity.
 4. **Timezone follows the device.** User.timezone auto-updates to the device timezone on change, without prompting. History is unaffected because dates are materialized at write time.
 5. **dayEndTime is forward-only.** Changing dayEndTime never reinterprets existing rows; they were resolved under the setting in effect when written.
 ---
+---
+## Target Resolution Contract
+
+1. The target in force for a habit on a given date is the HabitTarget row with the greatest effectiveFrom <= that date. There is no concept of a "current target" independent of a date; resolving for today means passing today's logical date explicitly.
+2. All completion grading (habitType, targetValue, directionality, streakCompletionThreshold) uses the target in force on the LOGGED date, evaluated at write time. Later target changes never re-grade existing HabitLog rows. Editing a logged value re-grades against the same logged-date target.
+3. A date with no target in force (before the earliest effectiveFrom) is not loggable.
+---
