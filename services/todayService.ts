@@ -8,7 +8,11 @@ import {
   getVisibleTodayQuickActions,
   sortTodayHabitItems,
 } from '../utils/todaySelectors';
-import { getEffectiveDate } from '../utils/dateUtils';
+import {
+  addDaysToIsoDate,
+  currentLogicalDate as getCurrentLogicalDate,
+  resolveLogicalDate,
+} from '../utils/dateUtils';
 import type { Habit, HabitLog, HabitTarget, UserPreferences } from '../types/schema';
 import type {
   TodayFitnessItem,
@@ -22,7 +26,7 @@ import type {
 
 interface GetTodayViewModelParams {
   selectedDate?: dayjs.ConfigType;
-  currentDate?: dayjs.ConfigType;
+  currentDate?: Date | string;
   userId?: string | null;
   preferences?: UserPreferences | null;
 }
@@ -125,22 +129,27 @@ export async function getTodayViewModel(
   const userState = useUserStore.getState();
   const preferences = params.preferences ?? userState.preferences;
   const dayEndTime = preferences?.dayEndTime ?? '00:00';
+  const timezone = userState.timezone;
   const selectedDate = resolveSelectedLogicalDate(
     params.selectedDate,
     params.currentDate,
+    timezone,
     dayEndTime
   );
-  const currentLogicalDate = getEffectiveDate(params.currentDate ?? new Date(), dayEndTime).format(
-    'YYYY-MM-DD'
+  const selectedCurrentLogicalDate = resolveCurrentLogicalDate(
+    params.currentDate,
+    timezone,
+    dayEndTime
   );
   const userId = params.userId ?? userState.userId;
-  const habitItems = getStoreBackedHabitItems(selectedDate, currentLogicalDate);
+  const habitItems = getStoreBackedHabitItems(selectedDate, selectedCurrentLogicalDate);
   const sortedHabitItems = sortTodayHabitItems(habitItems);
   const habitSummary = getTodayHabitCompletionSummary(sortedHabitItems);
   const fitnessItems = userId ? await loadPersistedFitnessItems(userId, selectedDate) : [];
   const labels = formatTodayDateLabels(selectedDate, {
     currentDate: params.currentDate,
     dayEndTime,
+    timezone,
   });
 
   return {
@@ -190,10 +199,17 @@ export async function moveTodayFitnessSessionToTomorrow(
 ): Promise<TodayFitnessSessionActionResult> {
   const config = FITNESS_TABLE_BY_KIND[kind];
   const session = await getActionSession(config, sessionId);
-  const destinationDate = dayjs(selectedDate).startOf('day').add(1, 'day').format('YYYY-MM-DD');
+  const selectedLogicalDate = normalizeSelectedDate(selectedDate);
+  const destinationDate = addDaysToIsoDate(selectedLogicalDate, 1);
 
   if (!session) {
-    return actionFailure(kind, sessionId, 'not_found', 'Fitness session was not found.', destinationDate);
+    return actionFailure(
+      kind,
+      sessionId,
+      'not_found',
+      'Fitness session was not found.',
+      destinationDate
+    );
   }
 
   if (!isActionableSessionStatus(session.status)) {
@@ -325,15 +341,29 @@ export function undoTodayHabitCompletion(logId: string): TodayHabitUndoActionRes
 
 function resolveSelectedLogicalDate(
   selectedDate: dayjs.ConfigType | undefined,
-  currentDate: dayjs.ConfigType | undefined,
+  currentDate: Date | string | undefined,
+  timezone: string,
   dayEndTime: string
 ): string {
-  if (selectedDate !== undefined) {
-    return dayjs(selectedDate).startOf('day').format('YYYY-MM-DD');
+  if (selectedDate !== undefined && selectedDate !== null) {
+    return normalizeSelectedDate(selectedDate);
   }
 
-  // TODO: Apply User.timezone once user records are loaded into app state.
-  return getEffectiveDate(currentDate ?? new Date(), dayEndTime).format('YYYY-MM-DD');
+  return resolveCurrentLogicalDate(currentDate, timezone, dayEndTime);
+}
+
+function resolveCurrentLogicalDate(
+  currentDate: Date | string | undefined,
+  timezone: string,
+  dayEndTime: string
+): string {
+  return currentDate === undefined
+    ? getCurrentLogicalDate(timezone, dayEndTime)
+    : resolveLogicalDate(currentDate, timezone, dayEndTime);
+}
+
+function normalizeSelectedDate(selectedDate: dayjs.ConfigType): string {
+  return dayjs(selectedDate).startOf('day').format('YYYY-MM-DD');
 }
 
 function getStoreBackedHabitItems(

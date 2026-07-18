@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { EnabledModule } from '../constants/enums';
-import { getEffectiveDate } from './dateUtils';
+import { getEffectiveDate, resolveLogicalDate } from './dateUtils';
 import type {
   TodayHabitItem,
   TodayQuickAction,
@@ -19,8 +19,9 @@ export interface TodayDateLabels {
 }
 
 interface FormatTodayDateOptions {
-  currentDate?: dayjs.ConfigType;
+  currentDate?: Date | string;
   dayEndTime?: string;
+  timezone?: string;
 }
 
 const DEFAULT_QUICK_ACTIONS: TodayQuickAction[] = [
@@ -102,10 +103,7 @@ export function formatTodayTitle(
   options: FormatTodayDateOptions = {}
 ): string {
   const selected = dayjs(selectedDate).startOf('day');
-  const currentLogicalDate = getEffectiveDate(
-    options.currentDate ?? new Date(),
-    options.dayEndTime
-  );
+  const currentLogicalDate = resolveTodayCurrentLogicalDate(options);
   const dayDiff = selected.diff(currentLogicalDate, 'day');
 
   if (dayDiff === 0) return 'Today';
@@ -123,6 +121,21 @@ function getHabitSortGroup(item: TodayHabitItem): number {
   if (item.scheduledTime) return 0;
   if (item.status === 'completed') return 2;
   return 1;
+}
+
+function resolveTodayCurrentLogicalDate(options: FormatTodayDateOptions): dayjs.Dayjs {
+  if (options.timezone) {
+    const currentDate = options.currentDate ?? new Date();
+    const logicalDate = resolveLogicalDate(
+      currentDate,
+      options.timezone,
+      options.dayEndTime ?? '00:00'
+    );
+
+    return dayjs(logicalDate).startOf('day');
+  }
+
+  return getEffectiveDate(options.currentDate ?? new Date(), options.dayEndTime);
 }
 
 function compareOptionalStrings(a?: string, b?: string): number {

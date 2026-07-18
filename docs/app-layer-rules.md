@@ -88,3 +88,4 @@ Known Today gaps:
 ## Enforcement
 
 Implement app-layer rules in selectors, services, stores, or validation helpers so behavior holds across entry points. Do not place raw SQL or business rules directly in screens unless the existing project architecture already does that for the same domain.
+Date resolution: all logical-date writes go through resolveLogicalDate in utils/dateUtils.ts. See Date Semantics Contract in docs/schema-errata.md.

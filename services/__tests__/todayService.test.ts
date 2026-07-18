@@ -1,11 +1,13 @@
 import { describe, expect, it, beforeEach, jest } from '@jest/globals';
 import { AppMode, EnabledModule, FrequencyType } from '../../constants/enums';
 import { useHabitStore } from '../../store/habitStore';
+import { useUserStore } from '../../store/userStore';
 import type { Habit, HabitLog, HabitTarget, UserPreferences } from '../../types/schema';
 import { getDb } from '../db';
 import {
   completeTodayHabit,
   getTodayViewModel,
+  moveTodayFitnessSessionToTomorrow,
   saveTodayHabitValue,
   undoTodayHabitCompletion,
 } from '../todayService';
@@ -107,6 +109,12 @@ function mockPersistedFitnessRows(workoutRows: unknown[], cardioRows: unknown[])
 describe('todayService', () => {
   beforeEach(() => {
     useHabitStore.setState({ habits: [], todayLogs: [], habitTargets: [] });
+    useUserStore.setState({
+      userId: null,
+      timezone: 'UTC',
+      appMode: AppMode.COMBINED,
+      preferences: null,
+    });
     mockGetDb.mockReset();
   });
 
@@ -131,6 +139,22 @@ describe('todayService', () => {
       'nutrition',
       'tally',
     ]);
+  });
+
+  it('uses the user timezone and dayEndTime for unselected Today composition', async () => {
+    useUserStore.setState({ timezone: 'America/New_York' });
+
+    const viewModel = await getTodayViewModel({
+      currentDate: '2026-05-08T06:59:59.000Z',
+      userId: null,
+      preferences: preferences({ dayEndTime: '03:00' }),
+    });
+
+    expect(viewModel).toMatchObject({
+      selectedDate: '2026-05-07',
+      title: 'Today',
+      subtitle: 'May 7',
+    });
   });
 
   it('composes visible habit items from the current habit store state', async () => {
@@ -356,5 +380,35 @@ describe('todayService', () => {
       '2026-05-07',
       '2026-05-07',
     ]);
+  });
+
+  it('moves a fitness session to the next calendar date without timestamp arithmetic', async () => {
+    const getFirstAsync = jest.fn<(...args: unknown[]) => Promise<unknown>>();
+    const runAsync = jest.fn<(...args: unknown[]) => Promise<void>>();
+    getFirstAsync.mockResolvedValueOnce({
+      id: 'session-id',
+      status: 'planned',
+      templateId: null,
+      name: null,
+    });
+    runAsync.mockResolvedValueOnce(undefined);
+    mockGetDb.mockReturnValue({
+      getFirstAsync,
+      runAsync,
+    } as unknown as ReturnType<typeof getDb>);
+
+    await expect(
+      moveTodayFitnessSessionToTomorrow('workout', 'session-id', '2026-12-31')
+    ).resolves.toEqual({
+      ok: true,
+      kind: 'workout',
+      sessionId: 'session-id',
+      destinationDate: '2027-01-01',
+    });
+    expect(runAsync).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE WorkoutSession SET scheduledDate = ? WHERE id = ?'),
+      '2027-01-01',
+      'session-id'
+    );
   });
 });

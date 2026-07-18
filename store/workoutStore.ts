@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { WorkoutSession, ExerciseLog, SetLog } from '../types/schema';
 import { getDb } from '../services/db';
+import { useUserStore } from './userStore';
+import { resolveLogicalDate } from '../utils/dateUtils';
 
 interface RestTimer {
   active: boolean;
@@ -115,10 +117,17 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     if (!activeSession) return;
 
     const now = new Date().toISOString();
+    const startedAt = activeSession.startedAt ?? now;
+    const { preferences, timezone } = useUserStore.getState();
+    const workoutDate =
+      activeSession.workoutDate ??
+      resolveLogicalDate(startedAt, timezone, preferences?.dayEndTime ?? '00:00');
     const session: WorkoutSession = {
       ...activeSession,
       status: 'completed',
+      startedAt,
       completedAt: now,
+      workoutDate,
     };
 
     const exerciseLogs: ExerciseLog[] = session.exerciseLogs.map((ex) => ({
