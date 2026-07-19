@@ -47,3 +47,11 @@ No future schema decision is pending for this ambiguity.
 2. HabitLog remains the sole source of truth for completion, grading, streaks, and aggregates. If journal and log disagree, the log wins by definition. No sync invariant exists or may be introduced.
 3. Completion operations append one event atomically with the log write; clearing a day deletes that day's events; edits touch the journal in no way.
 ---
+---
+## Schedule Generation Contract
+
+1. Generated sessions permanently record their origin slot in generatedForDate. This field is immutable; Move to Tomorrow and all other actions mutate scheduledDate only.
+2. Generation is idempotent, keyed on (scheduleId, generatedForDate): a planned session is created for a scheduled slot only if no session — in any status, on any current date — exists for that slot. A moved, skipped, or completed session therefore permanently satisfies its origin slot; vacated dates are never backfilled.
+3. Generation runs before Today composition and covers logical dates from the current logical date through the look-ahead window. Manually created sessions carry generatedForDate NULL and are never touched by generation.
+4. Session completion updates the existing planned/live row for that session; completion never inserts a new row when the session already exists.
+---

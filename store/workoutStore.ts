@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import type { WorkoutSession, ExerciseLog, SetLog } from '../types/schema';
 import { getDb } from '../services/db';
+import {
+  WORKOUT_SESSION_ROW_COLUMNS,
+  rowToWorkoutSession,
+  type WorkoutSessionRow,
+} from '../services/mappers/fitnessMapper';
 import { useUserStore } from './userStore';
 import { resolveLogicalDate } from '../utils/dateUtils';
 
@@ -137,32 +142,74 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
     const db = getDb();
     await db.withTransactionAsync(async () => {
-      await db.runAsync(
-        `INSERT INTO WorkoutSession (
-          id, userId, templateId, scheduleId, name, templateNameSnapshot,
-          status, scheduledDate, scheduledTime, startedAt, completedAt,
-          loggedAt, isRetroactive, workoutDate, durationMinutes,
-          durationOverridden, rpe, note
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        session.id,
-        session.userId,
-        session.templateId ?? null,
-        session.scheduleId ?? null,
-        session.name ?? null,
-        session.templateNameSnapshot ?? null,
-        session.status,
-        session.scheduledDate ?? null,
-        session.scheduledTime ?? null,
-        session.startedAt ?? null,
-        session.completedAt ?? null,
-        session.loggedAt,
-        session.isRetroactive ? 1 : 0,
-        session.workoutDate ?? null,
-        session.durationMinutes ?? null,
-        session.durationOverridden ? 1 : 0,
-        session.rpe ?? null,
-        session.note ?? null
+      const existingSessionRow = await db.getFirstAsync<WorkoutSessionRow>(
+        `SELECT ${WORKOUT_SESSION_ROW_COLUMNS}
+        FROM WorkoutSession
+        WHERE id = ?
+        LIMIT 1`,
+        session.id
       );
+      const existingSession = existingSessionRow
+        ? rowToWorkoutSession(existingSessionRow)
+        : null;
+
+      if (existingSession) {
+        await db.runAsync(
+          `UPDATE WorkoutSession
+          SET status = ?,
+            scheduledDate = ?,
+            scheduledTime = ?,
+            startedAt = ?,
+            completedAt = ?,
+            isRetroactive = ?,
+            workoutDate = ?,
+            durationMinutes = ?,
+            durationOverridden = ?,
+            rpe = ?,
+            note = ?
+          WHERE id = ?`,
+          session.status,
+          session.scheduledDate ?? null,
+          session.scheduledTime ?? null,
+          session.startedAt ?? null,
+          session.completedAt ?? null,
+          session.isRetroactive ? 1 : 0,
+          session.workoutDate ?? null,
+          session.durationMinutes ?? null,
+          session.durationOverridden ? 1 : 0,
+          session.rpe ?? null,
+          session.note ?? null,
+          session.id
+        );
+      } else {
+        await db.runAsync(
+          `INSERT INTO WorkoutSession (
+            id, userId, templateId, scheduleId, generatedForDate, name,
+            templateNameSnapshot, status, scheduledDate, scheduledTime,
+            startedAt, completedAt, loggedAt, isRetroactive, workoutDate,
+            durationMinutes, durationOverridden, rpe, note
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          session.id,
+          session.userId,
+          session.templateId ?? null,
+          session.scheduleId ?? null,
+          session.generatedForDate ?? null,
+          session.name ?? null,
+          session.templateNameSnapshot ?? null,
+          session.status,
+          session.scheduledDate ?? null,
+          session.scheduledTime ?? null,
+          session.startedAt ?? null,
+          session.completedAt ?? null,
+          session.loggedAt,
+          session.isRetroactive ? 1 : 0,
+          session.workoutDate ?? null,
+          session.durationMinutes ?? null,
+          session.durationOverridden ? 1 : 0,
+          session.rpe ?? null,
+          session.note ?? null
+        );
+      }
 
       for (const ex of exerciseLogs) {
         await db.runAsync(

@@ -107,6 +107,15 @@ export function addDaysToIsoDate(date: string, days: number): string {
   return formatIsoDate(year, month, day);
 }
 
+export function diffIsoDatesInDays(startDate: string, endDate: string): number {
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return (isoDateToUtcTime(endDate) - isoDateToUtcTime(startDate)) / millisecondsPerDay;
+}
+
+export function getIsoDateDayOfWeek(date: string): number {
+  return new Date(isoDateToUtcTime(date)).getUTCDay();
+}
+
 /**
  * Returns the display date for a given timestamp, accounting for the day
  * boundary offset. Activity logged between midnight and dayEndTime counts
@@ -271,6 +280,11 @@ function parseIsoDate(date: string): IsoDateParts {
   }
 
   return { year, month, day };
+}
+
+function isoDateToUtcTime(date: string): number {
+  const parts = parseIsoDate(date);
+  return Date.UTC(parts.year, parts.month - 1, parts.day);
 }
 
 function formatIsoDate(year: number, month: number, day: number): string {

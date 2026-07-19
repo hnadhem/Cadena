@@ -898,7 +898,7 @@ describe('habitLogService', () => {
     await expect(
       getSqliteMasterName('index', 'idx_habitCompletionEvent_habitId_date')
     ).resolves.toBe('idx_habitCompletionEvent_habitId_date');
-    await expect(getSchemaVersion()).resolves.toBe(2);
+    await expect(getSchemaVersion()).resolves.toBe(3);
   });
 
   it('applies the HabitCompletionEvent migration after prior migrations', async () => {
@@ -915,7 +915,7 @@ describe('habitLogService', () => {
     await expect(
       getSqliteMasterName('index', 'idx_habitCompletionEvent_habitId_date')
     ).resolves.toBe('idx_habitCompletionEvent_habitId_date');
-    await expect(getSchemaVersion()).resolves.toBe(2);
+    await expect(getSchemaVersion()).resolves.toBe(3);
   });
 
   it('completes, clears, and re-completes binary logs and journal events', async () => {

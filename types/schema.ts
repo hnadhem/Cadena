@@ -161,6 +161,7 @@ export interface WorkoutSession {
   userId: string;
   templateId?: string;
   scheduleId?: string;
+  generatedForDate?: string;
   name?: string;
   templateNameSnapshot?: string;
   status: 'planned' | 'live' | 'completed' | 'skipped';
@@ -175,6 +176,7 @@ export interface WorkoutSession {
   durationOverridden: boolean;
   rpe?: number;
   note?: string;
+  liveState?: string;
   exerciseLogs: ExerciseLog[];
 }
 
@@ -244,6 +246,7 @@ export interface CardioSession {
   userId: string;
   templateId?: string;
   scheduleId?: string;
+  generatedForDate?: string;
   templateNameSnapshot?: string;
   type: CardioType;
   subtype?: string;

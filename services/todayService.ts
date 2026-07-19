@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { getDb } from './db';
 import { clearLog, completeBinary, submitMeasurableValue } from './habitLogService';
 import { getHabitById, listHabits } from './habitService';
+import { generateSessions } from './scheduleGenerationService';
 import { resolveTargets } from './habitTargetService';
 import {
   HABIT_LOG_ROW_COLUMNS,
@@ -137,18 +138,23 @@ export async function getTodayViewModel(
   const preferences = params.preferences ?? userState.preferences;
   const dayEndTime = preferences?.dayEndTime ?? '00:00';
   const timezone = userState.timezone;
+  const compositionInstant = params.currentDate ?? new Date();
   const selectedDate = resolveSelectedLogicalDate(
     params.selectedDate,
-    params.currentDate,
+    compositionInstant,
     timezone,
     dayEndTime
   );
   const selectedCurrentLogicalDate = resolveCurrentLogicalDate(
-    params.currentDate,
+    compositionInstant,
     timezone,
     dayEndTime
   );
   const userId = params.userId ?? userState.userId;
+  if (userId) {
+    await generateSessionsForTodayComposition(userId, compositionInstant);
+  }
+
   const habitItems = userId
     ? await loadPersistedHabitItems(userId, selectedDate, selectedCurrentLogicalDate)
     : [];
@@ -156,7 +162,7 @@ export async function getTodayViewModel(
   const habitSummary = getTodayHabitCompletionSummary(sortedHabitItems);
   const fitnessItems = userId ? await loadPersistedFitnessItems(userId, selectedDate) : [];
   const labels = formatTodayDateLabels(selectedDate, {
-    currentDate: params.currentDate,
+    currentDate: compositionInstant,
     dayEndTime,
     timezone,
   });
@@ -171,6 +177,17 @@ export async function getTodayViewModel(
     totalVisibleHabitCount: habitSummary.totalVisibleHabitCount,
     quickActions: getVisibleTodayQuickActions(preferences?.modulesEnabled),
   };
+}
+
+async function generateSessionsForTodayComposition(
+  userId: string,
+  instant: Date | string
+): Promise<void> {
+  try {
+    await generateSessions(userId, instant);
+  } catch (error) {
+    console.warn('Schedule generation failed during Today composition.', error);
+  }
 }
 
 export async function skipTodayFitnessSession(

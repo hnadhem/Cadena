@@ -611,6 +611,125 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 3,
+    up: (db) => {
+      db.execSync(`
+        PRAGMA foreign_keys = OFF;
+
+        DROP TABLE IF EXISTS WorkoutSession_migration_3;
+
+        CREATE TABLE WorkoutSession_migration_3 (
+          id TEXT PRIMARY KEY NOT NULL,
+          userId TEXT NOT NULL REFERENCES User(id),
+          templateId TEXT REFERENCES WorkoutTemplate(id),
+          scheduleId TEXT REFERENCES WorkoutSchedule(id),
+          generatedForDate TEXT,
+          name TEXT,
+          templateNameSnapshot TEXT,
+          status TEXT NOT NULL DEFAULT 'planned',
+          scheduledDate TEXT,
+          scheduledTime TEXT,
+          startedAt TEXT,
+          completedAt TEXT,
+          loggedAt TEXT NOT NULL,
+          isRetroactive INTEGER NOT NULL DEFAULT 0,
+          workoutDate TEXT,
+          durationMinutes REAL,
+          durationOverridden INTEGER NOT NULL DEFAULT 0,
+          rpe INTEGER,
+          note TEXT,
+          liveState TEXT
+        );
+
+        INSERT INTO WorkoutSession_migration_3 (
+          id, userId, templateId, scheduleId, generatedForDate, name,
+          templateNameSnapshot, status, scheduledDate, scheduledTime,
+          startedAt, completedAt, loggedAt, isRetroactive, workoutDate,
+          durationMinutes, durationOverridden, rpe, note, liveState
+        )
+        SELECT
+          id, userId, templateId, scheduleId, NULL, name,
+          templateNameSnapshot, status, scheduledDate, scheduledTime,
+          startedAt, completedAt, loggedAt, isRetroactive, workoutDate,
+          durationMinutes, durationOverridden, rpe, note, NULL
+        FROM WorkoutSession;
+
+        DROP TABLE WorkoutSession;
+        ALTER TABLE WorkoutSession_migration_3 RENAME TO WorkoutSession;
+
+        CREATE INDEX IF NOT EXISTS idx_workoutSession_userId ON WorkoutSession(userId);
+        CREATE INDEX IF NOT EXISTS idx_workoutSession_status ON WorkoutSession(status);
+        CREATE INDEX IF NOT EXISTS idx_workoutSession_scheduledDate ON WorkoutSession(scheduledDate);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_workoutSession_schedule_generatedForDate
+          ON WorkoutSession(scheduleId, generatedForDate)
+          WHERE generatedForDate IS NOT NULL;
+
+        DROP TABLE IF EXISTS CardioSession_migration_3;
+
+        CREATE TABLE CardioSession_migration_3 (
+          id TEXT PRIMARY KEY NOT NULL,
+          userId TEXT NOT NULL REFERENCES User(id),
+          templateId TEXT REFERENCES CardioTemplate(id),
+          scheduleId TEXT REFERENCES CardioSchedule(id),
+          generatedForDate TEXT,
+          templateNameSnapshot TEXT,
+          type TEXT NOT NULL,
+          subtype TEXT,
+          sportName TEXT,
+          status TEXT NOT NULL DEFAULT 'planned',
+          scheduledDate TEXT,
+          scheduledTime TEXT,
+          startedAt TEXT,
+          completedAt TEXT,
+          loggedAt TEXT NOT NULL,
+          isRetroactive INTEGER NOT NULL DEFAULT 0,
+          cardioDate TEXT,
+          durationMinutes REAL,
+          durationOverridden INTEGER NOT NULL DEFAULT 0,
+          distanceMiles REAL,
+          caloriesBurned INTEGER,
+          elevationGainFt REAL,
+          rpe INTEGER,
+          heartRateAvg INTEGER,
+          heartRateMax INTEGER,
+          cadence INTEGER,
+          resistance INTEGER,
+          powerWatts INTEGER,
+          route TEXT,
+          note TEXT
+        );
+
+        INSERT INTO CardioSession_migration_3 (
+          id, userId, templateId, scheduleId, generatedForDate,
+          templateNameSnapshot, type, subtype, sportName, status,
+          scheduledDate, scheduledTime, startedAt, completedAt, loggedAt,
+          isRetroactive, cardioDate, durationMinutes, durationOverridden,
+          distanceMiles, caloriesBurned, elevationGainFt, rpe, heartRateAvg,
+          heartRateMax, cadence, resistance, powerWatts, route, note
+        )
+        SELECT
+          id, userId, templateId, scheduleId, NULL,
+          templateNameSnapshot, type, subtype, sportName, status,
+          scheduledDate, scheduledTime, startedAt, completedAt, loggedAt,
+          isRetroactive, cardioDate, durationMinutes, durationOverridden,
+          distanceMiles, caloriesBurned, elevationGainFt, rpe, heartRateAvg,
+          heartRateMax, cadence, resistance, powerWatts, route, note
+        FROM CardioSession;
+
+        DROP TABLE CardioSession;
+        ALTER TABLE CardioSession_migration_3 RENAME TO CardioSession;
+
+        CREATE INDEX IF NOT EXISTS idx_cardioSession_userId ON CardioSession(userId);
+        CREATE INDEX IF NOT EXISTS idx_cardioSession_status ON CardioSession(status);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_cardioSession_schedule_generatedForDate
+          ON CardioSession(scheduleId, generatedForDate)
+          WHERE generatedForDate IS NOT NULL;
+
+        PRAGMA foreign_keys = ON;
+      `);
+    },
+  },
 ];
 
 export async function runMigrations(databaseName = 'habit.db'): Promise<void> {
