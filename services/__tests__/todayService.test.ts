@@ -25,6 +25,16 @@ interface QueryLogEntry {
   params: TestBindValue[];
 }
 
+interface HabitCompletionEventRow {
+  id: string;
+  userId: string;
+  habitId: string;
+  date: string;
+  occurredAt: string;
+  value: number | null;
+  createdAt: string;
+}
+
 interface MockSqliteControls {
   __clearQueryLog: () => void;
   __getQueryLog: () => QueryLogEntry[];
@@ -1199,6 +1209,21 @@ async function getHabitLog(habitId: string, date: string): Promise<HabitLog | nu
   return row ? rowToHabitLog(row) : null;
 }
 
+async function getHabitCompletionEvents(
+  habitId: string,
+  date: string
+): Promise<HabitCompletionEventRow[]> {
+  return getDb().getAllAsync<HabitCompletionEventRow>(
+    `SELECT id, userId, habitId, date, occurredAt, value, createdAt
+    FROM HabitCompletionEvent
+    WHERE habitId = ?
+      AND date = ?
+    ORDER BY occurredAt, createdAt, id`,
+    habitId,
+    date
+  );
+}
+
 function setLoadedUser(overrides: Partial<UserPreferences> = {}): void {
   const prefs = preferences(overrides);
   useUserStore.setState({
@@ -1367,7 +1392,7 @@ describe('todayService', () => {
     ]);
   });
 
-  it('adds target, schedule, value, and streak metadata to habit items', async () => {
+  it('adds target, schedule, and value metadata to habit items', async () => {
     setLoadedUser();
     await seedHabit(habitRow({ id: 'water', name: 'Water' }));
     await seedTarget(
@@ -1415,7 +1440,6 @@ describe('todayService', () => {
         value: 72,
         targetValue: 64,
         targetUnit: 'oz',
-        streakCount: 2,
       }),
     ]);
   });
@@ -1452,7 +1476,7 @@ describe('todayService', () => {
     await expect(getHabitLog('walk', '2026-05-07')).resolves.toBeNull();
   });
 
-  it('saves measurable habit values and completes them only when the target is met', async () => {
+  it('routes measurable Today submissions as first-time completions or edits', async () => {
     setLoadedUser();
     await seedHabit(habitRow({ id: 'water' }));
     await seedTarget(
@@ -1466,41 +1490,101 @@ describe('todayService', () => {
       })
     );
 
-    const partialResult = await saveTodayHabitValue(
-      'water',
-      '2026-05-07',
-      32,
-      '2026-05-07T08:00:00.000Z'
-    );
-
-    expect(partialResult).toEqual({
-      ok: true,
-      log: expect.objectContaining({
-        habitId: 'water',
-        completed: false,
-        value: 32,
-        completedAt: undefined,
-      }),
-    });
-
-    const completeResult = await saveTodayHabitValue(
+    const firstResult = await saveTodayHabitValue(
       'water',
       '2026-05-07',
       64,
-      '2026-05-07T09:00:00.000Z'
+      '2026-05-07T08:00:00.000Z'
     );
 
-    expect(completeResult).toEqual({
+    expect(firstResult).toEqual({
       ok: true,
       log: expect.objectContaining({
         habitId: 'water',
         completed: true,
         value: 64,
-        completedAt: undefined,
+        completedAt: '2026-05-07T08:00:00.000Z',
+      }),
+    });
+    expect(await getHabitCompletionEvents('water', '2026-05-07')).toEqual([
+      expect.objectContaining({
+        userId: 'user-id',
+        habitId: 'water',
+        date: '2026-05-07',
+        occurredAt: '2026-05-07T08:00:00.000Z',
+        value: 64,
+        createdAt: '2026-05-07T08:00:00.000Z',
+      }),
+    ]);
+
+    const logId = firstResult.ok ? firstResult.log.id : '';
+    const editedResult = await saveTodayHabitValue(
+      'water',
+      '2026-05-07',
+      32,
+      '2026-05-07T09:00:00.000Z'
+    );
+
+    expect(editedResult).toEqual({
+      ok: true,
+      log: expect.objectContaining({
+        id: logId,
+        habitId: 'water',
+        completed: false,
+        value: 32,
+        completedAt: '2026-05-07T08:00:00.000Z',
       }),
     });
     await expect(getHabitLog('water', '2026-05-07')).resolves.toEqual(
-      expect.objectContaining({ value: 64, completed: true })
+      expect.objectContaining({
+        id: logId,
+        value: 32,
+        completed: false,
+        completedAt: '2026-05-07T08:00:00.000Z',
+      })
+    );
+    await expect(getHabitCompletionEvents('water', '2026-05-07')).resolves.toHaveLength(
+      1
+    );
+
+    await expect(
+      undoTodayHabitCompletion(logId, '2026-05-07T09:30:00.000Z')
+    ).resolves.toEqual({ ok: true, logId });
+    await expect(getHabitLog('water', '2026-05-07')).resolves.toBeNull();
+    await expect(getHabitCompletionEvents('water', '2026-05-07')).resolves.toEqual([]);
+
+    const resubmittedResult = await saveTodayHabitValue(
+      'water',
+      '2026-05-07',
+      64,
+      '2026-05-07T10:00:00.000Z'
+    );
+
+    expect(resubmittedResult).toEqual({
+      ok: true,
+      log: expect.objectContaining({
+        habitId: 'water',
+        completed: true,
+        value: 64,
+        completedAt: '2026-05-07T10:00:00.000Z',
+      }),
+    });
+    expect(await getHabitCompletionEvents('water', '2026-05-07')).toEqual([
+      expect.objectContaining({
+        userId: 'user-id',
+        habitId: 'water',
+        date: '2026-05-07',
+        occurredAt: '2026-05-07T10:00:00.000Z',
+        value: 64,
+        createdAt: '2026-05-07T10:00:00.000Z',
+      }),
+    ]);
+    await expect(getHabitLog('water', '2026-05-07')).resolves.toEqual(
+      expect.objectContaining({
+        value: 64,
+        completed: true,
+        completedAt: '2026-05-07T10:00:00.000Z',
+      })
     );
   });
 

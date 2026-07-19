@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { getDb } from './db';
-import { clearLog, completeBinary, setMeasurableValue } from './habitLogService';
+import { clearLog, completeBinary, submitMeasurableValue } from './habitLogService';
 import { getHabitById, listHabits } from './habitService';
 import { resolveTargets } from './habitTargetService';
 import {
@@ -306,7 +306,12 @@ export async function saveTodayHabitValue(
   const date = dayjs(selectedDate).startOf('day').format('YYYY-MM-DD');
 
   try {
-    const log = await setMeasurableValue(habitId, date, toActionInstant(instant), value);
+    const log = await submitMeasurableValue(
+      habitId,
+      date,
+      toActionInstant(instant),
+      value
+    );
     return { ok: true, log };
   } catch (error) {
     return {
@@ -390,12 +395,10 @@ async function loadPersistedHabitItems(
     (habit) => !habit.isHidden && !habit.archivedAt
   );
   const habitIds = visibleHabits.map((habit) => habit.id);
-  const [targetsByHabitId, logsByHabitId, completedLogs] = await Promise.all([
+  const [targetsByHabitId, logsByHabitId] = await Promise.all([
     resolveTargets(habitIds, selectedDate),
     loadSelectedHabitLogsByHabitId(habitIds, selectedDate),
-    loadCompletedHabitLogsThroughDate(habitIds, selectedDate),
   ]);
-  const logsByHabitDate = getHabitLogsByHabitDate(completedLogs);
 
   return visibleHabits.flatMap((habit) => {
     const target = targetsByHabitId.get(habit.id);
@@ -409,7 +412,6 @@ async function loadPersistedHabitItems(
         habit,
         logsByHabitId.get(habit.id),
         target,
-        logsByHabitDate,
         selectedDate,
         currentLogicalDate
       ),
@@ -421,7 +423,6 @@ function mapHabitToTodayItem(
   habit: Habit,
   log: HabitLog | undefined,
   target: HabitTarget,
-  logsByHabitDate: Map<string, HabitLog>,
   selectedDate: string,
   currentLogicalDate: string
 ): TodayHabitItem {
@@ -440,7 +441,6 @@ function mapHabitToTodayItem(
     value: log?.value,
     targetValue: target.targetValue,
     targetUnit: target.targetUnit,
-    streakCount: getHabitStreakCount(habit.id, selectedDate, log, logsByHabitDate),
   };
 }
 
@@ -489,29 +489,6 @@ async function loadSelectedHabitLogsByHabitId(
     const log = rowToHabitLog(row);
     return [log.habitId, log];
   }));
-}
-
-async function loadCompletedHabitLogsThroughDate(
-  habitIds: string[],
-  selectedDate: string
-): Promise<HabitLog[]> {
-  if (habitIds.length === 0) {
-    return [];
-  }
-
-  const placeholders = habitIds.map(() => '?').join(', ');
-  const rows = await getDb().getAllAsync<HabitLogRow>(
-    `SELECT ${HABIT_LOG_ROW_COLUMNS}
-    FROM HabitLog
-    WHERE habitId IN (${placeholders})
-      AND date <= ?
-      AND completed = 1
-    ORDER BY habitId ASC, date DESC`,
-    ...habitIds,
-    selectedDate
-  );
-
-  return rows.map(rowToHabitLog);
 }
 
 async function getHabitLogById(logId: string): Promise<HabitLog | null> {
@@ -685,43 +662,6 @@ function formatCardioTitle(type: string, subtype: string | null): string {
     .join(' ');
 
   return subtype ? `${primary} · ${subtype}` : primary;
-}
-
-function getHabitLogsByHabitDate(logs: readonly HabitLog[]): Map<string, HabitLog> {
-  return logs.reduce<Map<string, HabitLog>>((logsByHabitDate, log) => {
-    logsByHabitDate.set(getHabitDateKey(log.habitId, log.date), log);
-    return logsByHabitDate;
-  }, new Map());
-}
-
-function getHabitStreakCount(
-  habitId: string,
-  selectedDate: string,
-  selectedLog: HabitLog | undefined,
-  logsByHabitDate: Map<string, HabitLog>
-): number {
-  let cursor = dayjs(selectedDate).startOf('day');
-
-  if (!selectedLog?.completed) {
-    cursor = cursor.subtract(1, 'day');
-  }
-
-  let streakCount = 0;
-
-  while (streakCount < 3660) {
-    const log = logsByHabitDate.get(getHabitDateKey(habitId, cursor.format('YYYY-MM-DD')));
-
-    if (!log?.completed) break;
-
-    streakCount += 1;
-    cursor = cursor.subtract(1, 'day');
-  }
-
-  return streakCount;
-}
-
-function getHabitDateKey(habitId: string, date: string): string {
-  return `${habitId}:${date}`;
 }
 
 function toActionInstant(instant: Date | string): Date {

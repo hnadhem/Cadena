@@ -22,7 +22,6 @@ function habit(overrides: Partial<TodayHabitItem>): TodayHabitItem {
     value: overrides.value,
     targetValue: overrides.targetValue,
     targetUnit: overrides.targetUnit,
-    streakCount: overrides.streakCount,
   };
 }
 

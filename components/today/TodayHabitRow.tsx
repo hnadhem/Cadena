@@ -55,12 +55,6 @@ export function TodayHabitRow({ item, onPress }: TodayHabitRowProps) {
           </Text>
         )}
       </View>
-      {item.streakCount !== undefined && item.streakCount > 0 && (
-        <View style={styles.streakBadge}>
-          <Ionicons name="flame-outline" size={13} color={colors.textSecondaryLight} />
-          <Text style={styles.streakText}>{item.streakCount}</Text>
-        </View>
-      )}
       <Badge label={STATUS_LABELS[item.status]} state={STATUS_STATES[item.status]} />
     </Pressable>
   );
@@ -152,22 +146,5 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: typography.size.sm,
     color: colors.textSecondaryLight,
-  },
-  streakBadge: {
-    minWidth: 34,
-    minHeight: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing[1],
-    paddingHorizontal: spacing[2],
-    borderRadius: radius.md,
-    backgroundColor: colors.neutral100,
-  },
-  streakText: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.bold,
-    color: colors.textSecondaryLight,
-    fontVariant: ['tabular-nums'],
   },
 });

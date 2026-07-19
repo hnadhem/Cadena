@@ -121,23 +121,13 @@ export async function addMeasurableCompletion(
 
     validateEffortRating(context.habit, opts.effortRating);
 
-    const existingLog = await getHabitLog(txn, habitId, date);
-    const aggregateValue = (existingLog?.value ?? 0) + value;
-    const log: HabitLog = {
-      id: existingLog?.id ?? generateId(),
-      habitId,
-      userId: context.habit.userId,
+    savedLog = await addMeasurableCompletionInTransaction(
+      txn,
+      context,
       date,
-      completed: isMeasurableValueComplete(aggregateValue, context.target),
-      value: aggregateValue,
-      effortRating: opts.effortRating,
-      note: opts.note,
-      completedAt: getActionCompletedAt(date, context),
-    };
-
-    await upsertHabitLog(txn, log);
-    await appendHabitCompletionEvent(txn, context, date, value);
-    savedLog = log;
+      value,
+      opts
+    );
   });
 
   return requireSavedLog(savedLog);
@@ -164,21 +154,55 @@ export async function setMeasurableValue(
 
     validateEffortRating(context.habit, opts.effortRating);
 
-    const existingLog = await getHabitLog(txn, habitId, date);
-    const log: HabitLog = {
-      id: existingLog?.id ?? generateId(),
-      habitId,
-      userId: context.habit.userId,
-      date,
-      completed: isMeasurableValueComplete(value, context.target),
-      value,
-      effortRating: opts.effortRating,
-      note: opts.note,
-      completedAt: existingLog?.completedAt,
-    };
+    savedLog = await setMeasurableValueInTransaction(txn, context, date, value, opts);
+  });
 
-    await upsertHabitLogPreservingCompletedAt(txn, log);
-    savedLog = log;
+  return requireSavedLog(savedLog);
+}
+
+export async function submitMeasurableValue(
+  habitId: string,
+  date: string,
+  instant: Date,
+  value: number,
+  opts: HabitLogWriteOptions = {}
+): Promise<HabitLog> {
+  validateMeasurableValue(value);
+
+  const db = getDb();
+  let savedLog: HabitLog | null = null;
+
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    const context = await getWriteContext(txn, habitId, date, instant);
+
+    if (context.target.habitType !== 'measurable') {
+      throw new Error(`Habit "${habitId}" is binary on ${date}; use completeBinary.`);
+    }
+
+    validateEffortRating(context.habit, opts.effortRating);
+
+    const existingLog = await getHabitLog(txn, habitId, date);
+
+    if (existingLog) {
+      savedLog = await setMeasurableValueInTransaction(
+        txn,
+        context,
+        date,
+        value,
+        opts,
+        existingLog
+      );
+      return;
+    }
+
+    savedLog = await addMeasurableCompletionInTransaction(
+      txn,
+      context,
+      date,
+      value,
+      opts,
+      existingLog
+    );
   });
 
   return requireSavedLog(savedLog);
@@ -284,6 +308,64 @@ async function getHabitLog(
   );
 
   return row ? rowToHabitLog(row) : null;
+}
+
+async function addMeasurableCompletionInTransaction(
+  db: TransactionDb,
+  context: HabitWriteContext,
+  date: string,
+  value: number,
+  opts: HabitLogWriteOptions,
+  existingLog?: HabitLog | null
+): Promise<HabitLog> {
+  const currentLog = existingLog === undefined
+    ? await getHabitLog(db, context.habit.id, date)
+    : existingLog;
+  const aggregateValue = (currentLog?.value ?? 0) + value;
+  const log: HabitLog = {
+    id: currentLog?.id ?? generateId(),
+    habitId: context.habit.id,
+    userId: context.habit.userId,
+    date,
+    completed: isMeasurableValueComplete(aggregateValue, context.target),
+    value: aggregateValue,
+    effortRating: opts.effortRating,
+    note: opts.note,
+    completedAt: getActionCompletedAt(date, context),
+  };
+
+  await upsertHabitLog(db, log);
+  await appendHabitCompletionEvent(db, context, date, value);
+
+  return log;
+}
+
+async function setMeasurableValueInTransaction(
+  db: TransactionDb,
+  context: HabitWriteContext,
+  date: string,
+  value: number,
+  opts: HabitLogWriteOptions,
+  existingLog?: HabitLog | null
+): Promise<HabitLog> {
+  const currentLog = existingLog === undefined
+    ? await getHabitLog(db, context.habit.id, date)
+    : existingLog;
+  const log: HabitLog = {
+    id: currentLog?.id ?? generateId(),
+    habitId: context.habit.id,
+    userId: context.habit.userId,
+    date,
+    completed: isMeasurableValueComplete(value, context.target),
+    value,
+    effortRating: opts.effortRating,
+    note: opts.note,
+    completedAt: currentLog?.completedAt,
+  };
+
+  await upsertHabitLogPreservingCompletedAt(db, log);
+
+  return log;
 }
 
 async function upsertHabitLog(db: TransactionDb, log: HabitLog): Promise<void> {

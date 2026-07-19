@@ -32,7 +32,6 @@ export interface TodayHabitItem {
   value?: number;
   targetValue?: number;
   targetUnit?: string;
-  streakCount?: number;
 }
 
 export type TodayQuickActionKind = 'checkIn' | 'nutrition' | 'medication' | 'tally';
