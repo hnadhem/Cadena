@@ -11,7 +11,7 @@ import {
 const TABLE = 'HabitLog';
 
 export const HABIT_LOG_ROW_COLUMNS =
-  'id, habitId, userId, date, completed, value, effortRating, note, completedAt';
+  'id, habitId, userId, date, completed, streakValid, value, effortRating, note, completedAt';
 
 export interface HabitLogRow {
   id: string;
@@ -19,6 +19,7 @@ export interface HabitLogRow {
   userId: string;
   date: string;
   completed: number;
+  streakValid: number;
   value: number | null;
   effortRating: number | null;
   note: string | null;
@@ -34,6 +35,7 @@ export function rowToHabitLog(row: unknown): HabitLog {
     userId: readString(record, TABLE, 'userId'),
     date: readString(record, TABLE, 'date'),
     completed: readBooleanInt(record, TABLE, 'completed'),
+    streakValid: readBooleanInt(record, TABLE, 'streakValid'),
     value: readNullableNumber(record, TABLE, 'value'),
     effortRating: readNullableNumber(record, TABLE, 'effortRating'),
     note: readNullableString(record, TABLE, 'note'),
@@ -48,6 +50,7 @@ export function habitLogToRow(log: HabitLog): HabitLogRow {
     userId: log.userId,
     date: log.date,
     completed: booleanToInt(log.completed),
+    streakValid: booleanToInt(log.streakValid),
     value: log.value ?? null,
     effortRating: log.effortRating ?? null,
     note: log.note ?? null,

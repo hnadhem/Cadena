@@ -30,13 +30,19 @@ interface SqliteMasterRow {
   name: string;
 }
 
+interface TableInfoRow {
+  name: string;
+}
+
 interface SchemaVersionRow {
   version: number;
 }
 
 interface MockSqliteControls {
   __failNextHabitCompletionEventInsert: () => void;
+  __getHabitLogRows: (databaseName: string) => HabitLogRow[];
   __resetDatabase: (databaseName: string) => void;
+  __seedHabitLogRow: (databaseName: string, row: HabitLogRow) => void;
   __setSchemaVersion: (databaseName: string, version: number) => void;
 }
 
@@ -109,6 +115,7 @@ jest.mock('expo-sqlite', () => {
     userId: string;
     date: string;
     completed: number;
+    streakValid: number;
     value: number | null;
     effortRating: number | null;
     note: string | null;
@@ -125,6 +132,16 @@ jest.mock('expo-sqlite', () => {
     createdAt: string;
   }
 
+  interface MockBodyMetricRow {
+    id: string;
+    userId: string;
+    date: string;
+    type: string;
+    value: number;
+    note: string | null;
+    loggedAt: string;
+  }
+
   interface MockSchemaObjectRow {
     type: 'table' | 'index';
     name: string;
@@ -138,6 +155,7 @@ jest.mock('expo-sqlite', () => {
     habitTargets: MockHabitTargetRow[];
     habitLogs: MockHabitLogRow[];
     habitCompletionEvents: MockHabitCompletionEventRow[];
+    bodyMetrics: MockBodyMetricRow[];
   }
 
   let failNextHabitCompletionEventInsert = false;
@@ -151,6 +169,9 @@ jest.mock('expo-sqlite', () => {
     private habitTargets: MockHabitTargetRow[] = [];
     private habitLogs: MockHabitLogRow[] = [];
     private habitCompletionEvents: MockHabitCompletionEventRow[] = [];
+    private bodyMetrics: MockBodyMetricRow[] = [];
+    private tableColumns = new Map<string, Set<string>>();
+    private bodyMetricUserTypeDateUniqueIndex = false;
 
     async execAsync(source: string): Promise<void> {
       this.recordSchemaObjects(source);
@@ -162,6 +183,14 @@ jest.mock('expo-sqlite', () => {
 
     setSchemaVersion(version: number): void {
       this.schemaVersion = version;
+    }
+
+    seedHabitLogRow(row: MockHabitLogRow): void {
+      this.habitLogs.push(cloneHabitLogRow(row));
+    }
+
+    getHabitLogRows(): MockHabitLogRow[] {
+      return this.habitLogs.map(cloneHabitLogRow);
     }
 
     async withExclusiveTransactionAsync(
@@ -219,6 +248,25 @@ jest.mock('expo-sqlite', () => {
           lastInsertRowId: this.habitCompletionEvents.length,
           changes: 1,
         };
+      }
+
+      if (source.includes('INSERT INTO BodyMetric')) {
+        const row = readBodyMetricParams(params);
+
+        if (
+          this.bodyMetricUserTypeDateUniqueIndex &&
+          this.bodyMetrics.some(
+            (current) =>
+              current.userId === row.userId &&
+              current.type === row.type &&
+              current.date === row.date
+          )
+        ) {
+          throw new Error('UNIQUE constraint failed: BodyMetric.userId, BodyMetric.type, BodyMetric.date');
+        }
+
+        this.bodyMetrics.push(row);
+        return { lastInsertRowId: this.bodyMetrics.length, changes: 1 };
       }
 
       if (source.includes('INSERT INTO HabitLog')) {
@@ -323,6 +371,11 @@ jest.mock('expo-sqlite', () => {
     }
 
     async getAllAsync<T>(source: string, ...params: MockBindValue[]): Promise<T[]> {
+      if (source.includes('PRAGMA table_info')) {
+        const tableName = readPragmaTableName(source);
+        return this.getTableColumns(tableName).map((name) => ({ name })) as T[];
+      }
+
       if (source.includes('FROM HabitCompletionEvent')) {
         const habitId = readStringParam(params, 0, 'habitId');
         const date = readStringParam(params, 1, 'date');
@@ -334,6 +387,10 @@ jest.mock('expo-sqlite', () => {
       }
 
       return [];
+    }
+
+    private getTableColumns(tableName: string): string[] {
+      return Array.from(this.tableColumns.get(tableName) ?? []);
     }
 
     private resolveHabitContextRow(habitId: string): MockHabitContextRow | null {
@@ -363,6 +420,41 @@ jest.mock('expo-sqlite', () => {
         this.upsertSchemaObject({ type: 'table', name: 'schema_version' });
       }
 
+      if (source.includes('CREATE TABLE IF NOT EXISTS HabitLog')) {
+        this.setColumns('HabitLog', [
+          'id',
+          'habitId',
+          'userId',
+          'date',
+          'completed',
+          'value',
+          'effortRating',
+          'note',
+          'completedAt',
+        ]);
+      }
+
+      if (source.includes('CREATE TABLE IF NOT EXISTS NutritionLogEntry')) {
+        this.setColumns('NutritionLogEntry', [
+          'id',
+          'nutritionLogId',
+          'metricId',
+          'value',
+        ]);
+      }
+
+      if (source.includes('CREATE TABLE IF NOT EXISTS BodyMetric')) {
+        this.setColumns('BodyMetric', [
+          'id',
+          'userId',
+          'date',
+          'type',
+          'value',
+          'note',
+          'loggedAt',
+        ]);
+      }
+
       if (source.includes('CREATE TABLE IF NOT EXISTS HabitCompletionEvent')) {
         this.upsertSchemaObject({
           type: 'table',
@@ -380,6 +472,29 @@ jest.mock('expo-sqlite', () => {
           name: 'idx_habitCompletionEvent_habitId_date',
         });
       }
+
+      if (source.includes('ALTER TABLE NutritionLogEntry')) {
+        this.addColumn('NutritionLogEntry', 'sourceFoodLogEntryId');
+      }
+
+      if (source.includes('ALTER TABLE HabitLog')) {
+        this.addColumn('HabitLog', 'streakValid');
+      }
+
+      if (source.includes('UPDATE HabitLog') && source.includes('SET streakValid = completed')) {
+        this.habitLogs = this.habitLogs.map((row) => ({
+          ...row,
+          streakValid: row.completed,
+        }));
+      }
+
+      if (source.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_bodyMetric_userId_type_date')) {
+        this.bodyMetricUserTypeDateUniqueIndex = true;
+        this.upsertSchemaObject({
+          type: 'index',
+          name: 'idx_bodyMetric_userId_type_date',
+        });
+      }
     }
 
     private upsertSchemaObject(row: MockSchemaObjectRow): void {
@@ -394,6 +509,16 @@ jest.mock('expo-sqlite', () => {
       this.schemaObjects.push(row);
     }
 
+    private setColumns(tableName: string, columns: string[]): void {
+      this.tableColumns.set(tableName, new Set(columns));
+    }
+
+    private addColumn(tableName: string, columnName: string): void {
+      const columns = this.tableColumns.get(tableName) ?? new Set<string>();
+      columns.add(columnName);
+      this.tableColumns.set(tableName, columns);
+    }
+
     private snapshot(): MockSnapshot {
       return {
         schemaVersion: this.schemaVersion,
@@ -405,6 +530,7 @@ jest.mock('expo-sqlite', () => {
         habitCompletionEvents: this.habitCompletionEvents.map(
           cloneHabitCompletionEventRow
         ),
+        bodyMetrics: this.bodyMetrics.map(cloneBodyMetricRow),
       };
     }
 
@@ -418,6 +544,7 @@ jest.mock('expo-sqlite', () => {
       this.habitCompletionEvents = snapshot.habitCompletionEvents.map(
         cloneHabitCompletionEventRow
       );
+      this.bodyMetrics = snapshot.bodyMetrics.map(cloneBodyMetricRow);
     }
   }
 
@@ -427,8 +554,13 @@ jest.mock('expo-sqlite', () => {
     __failNextHabitCompletionEventInsert: () => {
       failNextHabitCompletionEventInsert = true;
     },
+    __getHabitLogRows: (databaseName: string) =>
+      getNamedDatabase(databaseName).getHabitLogRows(),
     __resetDatabase: (databaseName: string) => {
       namedDatabases.delete(databaseName);
+    },
+    __seedHabitLogRow: (databaseName: string, row: HabitLogRow) => {
+      getNamedDatabase(databaseName).seedHabitLogRow(row);
     },
     __setSchemaVersion: (databaseName: string, version: number) => {
       getNamedDatabase(databaseName).setSchemaVersion(version);
@@ -513,10 +645,11 @@ jest.mock('expo-sqlite', () => {
       userId: readStringParam(params, 2, 'userId'),
       date: readStringParam(params, 3, 'date'),
       completed: readNumberParam(params, 4, 'completed'),
-      value: readNullableNumberParam(params, 5, 'value'),
-      effortRating: readNullableNumberParam(params, 6, 'effortRating'),
-      note: readNullableStringParam(params, 7, 'note'),
-      completedAt: readNullableStringParam(params, 8, 'completedAt'),
+      streakValid: readNumberParam(params, 5, 'streakValid'),
+      value: readNullableNumberParam(params, 6, 'value'),
+      effortRating: readNullableNumberParam(params, 7, 'effortRating'),
+      note: readNullableStringParam(params, 8, 'note'),
+      completedAt: readNullableStringParam(params, 9, 'completedAt'),
     };
   }
 
@@ -529,10 +662,23 @@ jest.mock('expo-sqlite', () => {
       userId: readStringParam(params, 2, 'userId'),
       date: readStringParam(params, 3, 'date'),
       completed: readNumberParam(params, 4, 'completed'),
-      value: readNullableNumberParam(params, 5, 'value'),
-      effortRating: readNullableNumberParam(params, 6, 'effortRating'),
-      note: readNullableStringParam(params, 7, 'note'),
+      streakValid: readNumberParam(params, 5, 'streakValid'),
+      value: readNullableNumberParam(params, 6, 'value'),
+      effortRating: readNullableNumberParam(params, 7, 'effortRating'),
+      note: readNullableStringParam(params, 8, 'note'),
       completedAt: null,
+    };
+  }
+
+  function readBodyMetricParams(params: MockBindValue[]): MockBodyMetricRow {
+    return {
+      id: readStringParam(params, 0, 'id'),
+      userId: readStringParam(params, 1, 'userId'),
+      date: readStringParam(params, 2, 'date'),
+      type: readStringParam(params, 3, 'type'),
+      value: readNumberParam(params, 4, 'value'),
+      note: readNullableStringParam(params, 5, 'note'),
+      loggedAt: readStringParam(params, 6, 'loggedAt'),
     };
   }
 
@@ -606,10 +752,24 @@ jest.mock('expo-sqlite', () => {
     return { ...row };
   }
 
+  function cloneBodyMetricRow(row: MockBodyMetricRow): MockBodyMetricRow {
+    return { ...row };
+  }
+
   function cloneHabitCompletionEventRow(
     row: MockHabitCompletionEventRow
   ): MockHabitCompletionEventRow {
     return { ...row };
+  }
+
+  function readPragmaTableName(source: string): string {
+    const match = /PRAGMA table_info\((\w+)\)/.exec(source);
+
+    if (!match?.[1]) {
+      throw new Error(`Unsupported PRAGMA table_info query: ${source}`);
+    }
+
+    return match[1];
   }
 
   function readStringParam(params: MockBindValue[], index: number, label: string): string {
@@ -807,6 +967,14 @@ async function getSqliteMasterName(
   return row?.name ?? null;
 }
 
+async function getTableColumnNames(tableName: string): Promise<string[]> {
+  const rows = await getDb().getAllAsync<TableInfoRow>(
+    `PRAGMA table_info(${tableName})`
+  );
+
+  return rows.map((row) => row.name);
+}
+
 async function getSchemaVersion(): Promise<number | null> {
   const row = await getDb().getFirstAsync<SchemaVersionRow>(
     'SELECT version FROM schema_version ORDER BY version DESC LIMIT 1'
@@ -817,6 +985,32 @@ async function getSchemaVersion(): Promise<number | null> {
 
 function getMockSqlite(): MockSqliteControls {
   return jest.requireMock('expo-sqlite') as MockSqliteControls;
+}
+
+async function insertBodyMetric(
+  overrides: {
+    id: string;
+    userId?: string;
+    date?: string;
+    type?: string;
+    value?: number;
+    note?: string | null;
+    loggedAt?: string;
+  }
+): Promise<void> {
+  await getDb().runAsync(
+    `INSERT INTO BodyMetric (
+      id, userId, date, type, value, note, loggedAt
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    overrides.id,
+    overrides.userId ?? 'user-id',
+    overrides.date ?? '2026-05-10',
+    overrides.type ?? 'waist',
+    overrides.value ?? 32,
+    overrides.note ?? null,
+    overrides.loggedAt ?? '2026-05-10T08:00:00.000Z'
+  );
 }
 
 function requireSingleEvent(
@@ -886,8 +1080,8 @@ describe('habitLogService', () => {
     await seedUser();
   });
 
-  it('applies the HabitCompletionEvent migration on a fresh database', async () => {
-    const databaseName = 'habit-completion-event-fresh.db';
+  it('applies the audit migration on a fresh database', async () => {
+    const databaseName = 'habit-audit-fresh.db';
     getMockSqlite().__resetDatabase(databaseName);
 
     await runMigrations(databaseName);
@@ -898,24 +1092,90 @@ describe('habitLogService', () => {
     await expect(
       getSqliteMasterName('index', 'idx_habitCompletionEvent_habitId_date')
     ).resolves.toBe('idx_habitCompletionEvent_habitId_date');
-    await expect(getSchemaVersion()).resolves.toBe(3);
+    await expect(getTableColumnNames('NutritionLogEntry')).resolves.toEqual(
+      expect.arrayContaining(['sourceFoodLogEntryId'])
+    );
+    await expect(getTableColumnNames('HabitLog')).resolves.toEqual(
+      expect.arrayContaining(['streakValid'])
+    );
+    await expect(
+      getSqliteMasterName('index', 'idx_bodyMetric_userId_type_date')
+    ).resolves.toBe('idx_bodyMetric_userId_type_date');
+    await expect(getSchemaVersion()).resolves.toBe(4);
   });
 
-  it('applies the HabitCompletionEvent migration after prior migrations', async () => {
-    const databaseName = 'habit-completion-event-prior.db';
+  it('applies the audit migration after prior migrations and backfills streakValid', async () => {
+    const databaseName = 'habit-audit-prior.db';
     const sqlite = getMockSqlite();
     sqlite.__resetDatabase(databaseName);
-    sqlite.__setSchemaVersion(databaseName, 1);
+    sqlite.__setSchemaVersion(databaseName, 3);
+    sqlite.__seedHabitLogRow(databaseName, {
+      id: 'completed-log',
+      habitId: 'habit-id',
+      userId: 'user-id',
+      date: '2026-05-09',
+      completed: 1,
+      streakValid: 0,
+      value: null,
+      effortRating: null,
+      note: null,
+      completedAt: '2026-05-09T08:00:00.000Z',
+    });
+    sqlite.__seedHabitLogRow(databaseName, {
+      id: 'incomplete-log',
+      habitId: 'habit-id',
+      userId: 'user-id',
+      date: '2026-05-10',
+      completed: 0,
+      streakValid: 0,
+      value: 4,
+      effortRating: null,
+      note: null,
+      completedAt: null,
+    });
 
     await runMigrations(databaseName);
 
-    await expect(getSqliteMasterName('table', 'HabitCompletionEvent')).resolves.toBe(
-      'HabitCompletionEvent'
+    await expect(getTableColumnNames('NutritionLogEntry')).resolves.toEqual(
+      expect.arrayContaining(['sourceFoodLogEntryId'])
+    );
+    await expect(getTableColumnNames('HabitLog')).resolves.toEqual(
+      expect.arrayContaining(['streakValid'])
     );
     await expect(
-      getSqliteMasterName('index', 'idx_habitCompletionEvent_habitId_date')
-    ).resolves.toBe('idx_habitCompletionEvent_habitId_date');
-    await expect(getSchemaVersion()).resolves.toBe(3);
+      getSqliteMasterName('index', 'idx_bodyMetric_userId_type_date')
+    ).resolves.toBe('idx_bodyMetric_userId_type_date');
+    expect(sqlite.__getHabitLogRows(databaseName)).toEqual([
+      expect.objectContaining({
+        id: 'completed-log',
+        completed: 1,
+        streakValid: 1,
+      }),
+      expect.objectContaining({
+        id: 'incomplete-log',
+        completed: 0,
+        streakValid: 0,
+      }),
+    ]);
+    await expect(getSchemaVersion()).resolves.toBe(4);
+  });
+
+  it('rejects duplicate BodyMetric rows for the same user, type, and date', async () => {
+    await insertBodyMetric({
+      id: 'waist-one',
+      type: 'waist',
+      date: '2026-05-10',
+    });
+
+    await expect(
+      insertBodyMetric({
+        id: 'waist-two',
+        type: 'waist',
+        date: '2026-05-10',
+      })
+    ).rejects.toThrow(
+      'UNIQUE constraint failed: BodyMetric.userId, BodyMetric.type, BodyMetric.date'
+    );
   });
 
   it('completes, clears, and re-completes binary logs and journal events', async () => {
@@ -931,6 +1191,7 @@ describe('habitLogService', () => {
         habitId: 'binary-habit',
         date: '2026-05-10',
         completed: true,
+        streakValid: true,
         completedAt: firstInstant.toISOString(),
       })
     );
@@ -977,6 +1238,7 @@ describe('habitLogService', () => {
     );
 
     expect(recompletedLog.id).not.toBe(firstLog.id);
+    expect(recompletedLog.streakValid).toBe(true);
     expect(recompletedLog.completedAt).toBe(recompletedInstant.toISOString());
 
     const recompletedEvent = requireSingleEvent(
@@ -1088,6 +1350,140 @@ describe('habitLogService', () => {
     expect(todayLog.completedAt).toBe(instant.toISOString());
   });
 
+  it('grades measurable streakValid against threshold and directionality', async () => {
+    await seedUserPreferences();
+    await seedHabit(habitRow({ id: 'minimum-streak-habit' }));
+    await seedTarget(
+      targetRow({
+        habitId: 'minimum-streak-habit',
+        habitType: 'measurable',
+        targetValue: 10,
+        directionality: 'at_least',
+        streakCompletionThreshold: 5,
+      })
+    );
+    await seedHabit(habitRow({ id: 'maximum-streak-habit' }));
+    await seedTarget(
+      targetRow({
+        habitId: 'maximum-streak-habit',
+        habitType: 'measurable',
+        targetValue: 10,
+        directionality: 'at_most',
+        streakCompletionThreshold: 12,
+      })
+    );
+
+    const betweenMinimum = await setMeasurableValue(
+      'minimum-streak-habit',
+      '2026-05-10',
+      new Date('2026-05-10T08:00:00.000Z'),
+      6
+    );
+    const belowMinimum = await setMeasurableValue(
+      'minimum-streak-habit',
+      '2026-05-10',
+      new Date('2026-05-10T09:00:00.000Z'),
+      4
+    );
+    const betweenMaximum = await setMeasurableValue(
+      'maximum-streak-habit',
+      '2026-05-10',
+      new Date('2026-05-10T08:00:00.000Z'),
+      11
+    );
+    const aboveMaximum = await setMeasurableValue(
+      'maximum-streak-habit',
+      '2026-05-10',
+      new Date('2026-05-10T09:00:00.000Z'),
+      13
+    );
+
+    expect(betweenMinimum).toEqual(
+      expect.objectContaining({
+        completed: false,
+        streakValid: true,
+        value: 6,
+      })
+    );
+    expect(belowMinimum).toEqual(
+      expect.objectContaining({
+        completed: false,
+        streakValid: false,
+        value: 4,
+      })
+    );
+    expect(betweenMaximum).toEqual(
+      expect.objectContaining({
+        completed: false,
+        streakValid: true,
+        value: 11,
+      })
+    );
+    expect(aboveMaximum).toEqual(
+      expect.objectContaining({
+        completed: false,
+        streakValid: false,
+        value: 13,
+      })
+    );
+  });
+
+  it('edits re-grade streakValid against the logged-date target phase', async () => {
+    await seedUserPreferences();
+    await seedHabit(habitRow({ id: 'edit-streak-phase-habit' }));
+    await seedTarget(
+      targetRow({
+        id: 'old-streak-target',
+        habitId: 'edit-streak-phase-habit',
+        habitType: 'measurable',
+        targetValue: 10,
+        directionality: 'at_least',
+        streakCompletionThreshold: 5,
+        effectiveFrom: '2026-05-01',
+      })
+    );
+    await seedTarget(
+      targetRow({
+        id: 'later-streak-target',
+        habitId: 'edit-streak-phase-habit',
+        habitType: 'measurable',
+        targetValue: 20,
+        directionality: 'at_least',
+        streakCompletionThreshold: 15,
+        effectiveFrom: '2026-05-10',
+      })
+    );
+
+    const instant = new Date('2026-05-10T12:00:00.000Z');
+    const retroLog = await setMeasurableValue(
+      'edit-streak-phase-habit',
+      '2026-05-09',
+      instant,
+      6
+    );
+    const editedRetroLog = await setMeasurableValue(
+      'edit-streak-phase-habit',
+      '2026-05-09',
+      instant,
+      12
+    );
+
+    expect(retroLog).toEqual(
+      expect.objectContaining({
+        value: 6,
+        completed: false,
+        streakValid: true,
+      })
+    );
+    expect(editedRetroLog).toEqual(
+      expect.objectContaining({
+        value: 12,
+        completed: true,
+        streakValid: true,
+      })
+    );
+  });
+
   it('routes habit type flips through the target phase for the logged date', async () => {
     await seedUserPreferences();
     await seedHabit(habitRow({ id: 'type-flip-habit' }));
@@ -1143,6 +1539,7 @@ describe('habitLogService', () => {
         habitType: 'measurable',
         targetValue: 10,
         directionality: 'at_least',
+        streakCompletionThreshold: 6,
       })
     );
     await seedHabit(habitRow({ id: 'maximum-habit' }));
@@ -1152,6 +1549,7 @@ describe('habitLogService', () => {
         habitType: 'measurable',
         targetValue: 10,
         directionality: 'at_most',
+        streakCompletionThreshold: 12,
       })
     );
 
@@ -1161,11 +1559,17 @@ describe('habitLogService', () => {
       new Date('2026-05-10T08:00:00.000Z'),
       4
     );
-    const crossed = await addMeasurableCompletion(
+    const streakCrossed = await addMeasurableCompletion(
       'minimum-habit',
       '2026-05-10',
       new Date('2026-05-10T09:00:00.000Z'),
-      6
+      2
+    );
+    const crossed = await addMeasurableCompletion(
+      'minimum-habit',
+      '2026-05-10',
+      new Date('2026-05-10T10:00:00.000Z'),
+      4
     );
     const underLimit = await addMeasurableCompletion(
       'maximum-habit',
@@ -1179,21 +1583,44 @@ describe('habitLogService', () => {
       new Date('2026-05-10T09:00:00.000Z'),
       7
     );
+    const overStreakLimit = await addMeasurableCompletion(
+      'maximum-habit',
+      '2026-05-10',
+      new Date('2026-05-10T10:00:00.000Z'),
+      2
+    );
 
-    expect(partial).toEqual(expect.objectContaining({ value: 4, completed: false }));
+    expect(partial).toEqual(
+      expect.objectContaining({ value: 4, completed: false, streakValid: false })
+    );
+    expect(streakCrossed).toEqual(
+      expect.objectContaining({ value: 6, completed: false, streakValid: true })
+    );
     expect(crossed).toEqual(
       expect.objectContaining({
         value: 10,
         completed: true,
-        completedAt: '2026-05-10T09:00:00.000Z',
+        streakValid: true,
+        completedAt: '2026-05-10T10:00:00.000Z',
       })
     );
-    expect(underLimit).toEqual(expect.objectContaining({ value: 4, completed: true }));
+    expect(underLimit).toEqual(
+      expect.objectContaining({ value: 4, completed: true, streakValid: true })
+    );
     expect(overLimit).toEqual(
       expect.objectContaining({
         value: 11,
         completed: false,
+        streakValid: true,
         completedAt: '2026-05-10T09:00:00.000Z',
+      })
+    );
+    expect(overStreakLimit).toEqual(
+      expect.objectContaining({
+        value: 13,
+        completed: false,
+        streakValid: false,
+        completedAt: '2026-05-10T10:00:00.000Z',
       })
     );
   });

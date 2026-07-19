@@ -730,6 +730,27 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 4,
+    up: (db) => {
+      db.execSync(`
+        ALTER TABLE NutritionLogEntry
+          ADD COLUMN sourceFoodLogEntryId TEXT NULL REFERENCES NutritionFoodLogEntry(id);
+
+        ALTER TABLE HabitLog
+          ADD COLUMN streakValid INTEGER NOT NULL DEFAULT 0;
+
+        -- Existing HabitLog rows predate threshold-specific streak grading; no rows
+        -- carry a streakCompletionThreshold distinct from targetValue, so completed is
+        -- the correct streakValid backfill.
+        UPDATE HabitLog
+        SET streakValid = completed;
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_bodyMetric_userId_type_date
+          ON BodyMetric(userId, type, date);
+      `);
+    },
+  },
 ];
 
 export async function runMigrations(databaseName = 'habit.db'): Promise<void> {

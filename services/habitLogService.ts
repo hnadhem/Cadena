@@ -86,7 +86,7 @@ export async function completeBinary(
       habitId,
       userId: context.habit.userId,
       date,
-      completed: true,
+      ...gradeHabitLog(context.target, undefined, true),
       effortRating: opts.effortRating,
       note: opts.note,
       completedAt: getActionCompletedAt(date, context),
@@ -322,12 +322,14 @@ async function addMeasurableCompletionInTransaction(
     ? await getHabitLog(db, context.habit.id, date)
     : existingLog;
   const aggregateValue = (currentLog?.value ?? 0) + value;
+  const grade = gradeHabitLog(context.target, aggregateValue);
   const log: HabitLog = {
     id: currentLog?.id ?? generateId(),
     habitId: context.habit.id,
     userId: context.habit.userId,
     date,
-    completed: isMeasurableValueComplete(aggregateValue, context.target),
+    completed: grade.completed,
+    streakValid: grade.streakValid,
     value: aggregateValue,
     effortRating: opts.effortRating,
     note: opts.note,
@@ -351,12 +353,14 @@ async function setMeasurableValueInTransaction(
   const currentLog = existingLog === undefined
     ? await getHabitLog(db, context.habit.id, date)
     : existingLog;
+  const grade = gradeHabitLog(context.target, value);
   const log: HabitLog = {
     id: currentLog?.id ?? generateId(),
     habitId: context.habit.id,
     userId: context.habit.userId,
     date,
-    completed: isMeasurableValueComplete(value, context.target),
+    completed: grade.completed,
+    streakValid: grade.streakValid,
     value,
     effortRating: opts.effortRating,
     note: opts.note,
@@ -373,11 +377,12 @@ async function upsertHabitLog(db: TransactionDb, log: HabitLog): Promise<void> {
 
   await db.runAsync(
     `INSERT INTO HabitLog (
-      id, habitId, userId, date, completed, value, effortRating, note, completedAt
+      id, habitId, userId, date, completed, streakValid, value, effortRating, note, completedAt
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(habitId, date) DO UPDATE SET
       completed = excluded.completed,
+      streakValid = excluded.streakValid,
       value = excluded.value,
       effortRating = excluded.effortRating,
       note = excluded.note,
@@ -387,6 +392,7 @@ async function upsertHabitLog(db: TransactionDb, log: HabitLog): Promise<void> {
     row.userId,
     row.date,
     row.completed,
+    row.streakValid,
     row.value,
     row.effortRating,
     row.note,
@@ -402,11 +408,12 @@ async function upsertHabitLogPreservingCompletedAt(
 
   await db.runAsync(
     `INSERT INTO HabitLog (
-      id, habitId, userId, date, completed, value, effortRating, note
+      id, habitId, userId, date, completed, streakValid, value, effortRating, note
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(habitId, date) DO UPDATE SET
       completed = excluded.completed,
+      streakValid = excluded.streakValid,
       value = excluded.value,
       effortRating = excluded.effortRating,
       note = excluded.note`,
@@ -415,6 +422,7 @@ async function upsertHabitLogPreservingCompletedAt(
     row.userId,
     row.date,
     row.completed,
+    row.streakValid,
     row.value,
     row.effortRating,
     row.note
@@ -478,16 +486,54 @@ function validateEffortRating(habit: Habit, effortRating: number | undefined): v
   }
 }
 
-function isMeasurableValueComplete(value: number, target: HabitTarget): boolean {
-  if (target.targetValue === undefined) {
-    return value > 0;
+interface HabitLogGrade {
+  completed: boolean;
+  streakValid: boolean;
+}
+
+function gradeHabitLog(
+  target: HabitTarget,
+  value: number | undefined,
+  binaryCompleted = false
+): HabitLogGrade {
+  if (target.habitType !== 'measurable') {
+    return {
+      completed: binaryCompleted,
+      streakValid: binaryCompleted,
+    };
   }
 
-  if (target.directionality === 'at_most') {
-    return value <= target.targetValue;
+  const completed = isValueCompleteForTarget(
+    value,
+    target.targetValue,
+    target.directionality
+  );
+  const streakTargetValue = target.streakCompletionThreshold ?? target.targetValue;
+  const streakValid = isValueCompleteForTarget(
+    value,
+    streakTargetValue,
+    target.directionality
+  );
+
+  return { completed, streakValid };
+}
+
+function isValueCompleteForTarget(
+  value: number | undefined,
+  targetValue: number | undefined,
+  directionality: HabitTarget['directionality']
+): boolean {
+  const loggedValue = value ?? 0;
+
+  if (targetValue === undefined) {
+    return loggedValue > 0;
   }
 
-  return value >= target.targetValue;
+  if (directionality === 'at_most') {
+    return loggedValue <= targetValue;
+  }
+
+  return loggedValue >= targetValue;
 }
 
 function getActionCompletedAt(date: string, context: HabitWriteContext): string | undefined {

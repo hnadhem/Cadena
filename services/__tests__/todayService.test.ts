@@ -109,6 +109,7 @@ jest.mock('expo-sqlite', () => {
     userId: string;
     date: string;
     completed: number;
+    streakValid: number;
     value: number | null;
     effortRating: number | null;
     note: string | null;
@@ -707,10 +708,11 @@ jest.mock('expo-sqlite', () => {
       userId: readStringParam(params, 2, 'userId'),
       date: readStringParam(params, 3, 'date'),
       completed: readNumberParam(params, 4, 'completed'),
-      value: readNullableNumberParam(params, 5, 'value'),
-      effortRating: readNullableNumberParam(params, 6, 'effortRating'),
-      note: readNullableStringParam(params, 7, 'note'),
-      completedAt: readNullableStringParam(params, 8, 'completedAt'),
+      streakValid: readNumberParam(params, 5, 'streakValid'),
+      value: readNullableNumberParam(params, 6, 'value'),
+      effortRating: readNullableNumberParam(params, 7, 'effortRating'),
+      note: readNullableStringParam(params, 8, 'note'),
+      completedAt: readNullableStringParam(params, 9, 'completedAt'),
     };
   }
 
@@ -723,9 +725,10 @@ jest.mock('expo-sqlite', () => {
       userId: readStringParam(params, 2, 'userId'),
       date: readStringParam(params, 3, 'date'),
       completed: readNumberParam(params, 4, 'completed'),
-      value: readNullableNumberParam(params, 5, 'value'),
-      effortRating: readNullableNumberParam(params, 6, 'effortRating'),
-      note: readNullableStringParam(params, 7, 'note'),
+      streakValid: readNumberParam(params, 5, 'streakValid'),
+      value: readNullableNumberParam(params, 6, 'value'),
+      effortRating: readNullableNumberParam(params, 7, 'effortRating'),
+      note: readNullableStringParam(params, 8, 'note'),
       completedAt: null,
     };
   }
@@ -1045,6 +1048,7 @@ function habitLogRow(overrides: Partial<HabitLogRow> = {}): HabitLogRow {
     userId: overrides.userId ?? 'user-id',
     date: overrides.date ?? '2026-05-07',
     completed: overrides.completed ?? 0,
+    streakValid: overrides.streakValid ?? overrides.completed ?? 0,
     value: overrides.value ?? null,
     effortRating: overrides.effortRating ?? null,
     note: overrides.note ?? null,
@@ -1107,9 +1111,9 @@ async function seedTarget(row: HabitTargetRow): Promise<void> {
 async function seedLog(row: HabitLogRow): Promise<void> {
   await getDb().runAsync(
     `INSERT INTO HabitLog (
-      id, habitId, userId, date, completed, value, effortRating, note, completedAt
+      id, habitId, userId, date, completed, streakValid, value, effortRating, note, completedAt
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ...habitLogRowValues(row)
   );
 }
@@ -1293,6 +1297,7 @@ function habitLogRowValues(row: HabitLogRow): Array<string | number | null> {
     row.userId,
     row.date,
     row.completed,
+    row.streakValid,
     row.value,
     row.effortRating,
     row.note,

@@ -404,6 +404,7 @@ export interface HabitLog {
   userId: string;
   date: string;
   completed: boolean;
+  streakValid: boolean;
   value?: number;
   effortRating?: number;
   note?: string;
@@ -467,6 +468,7 @@ export interface NutritionLogEntry {
   nutritionLogId: string;
   metricId: string;
   value: number;
+  sourceFoodLogEntryId?: string;
 }
 
 export interface SavedFoodMetric {

@@ -1243,7 +1243,7 @@ describe('schedule generation service', () => {
     await runMigrations(freshDatabaseName);
 
     const freshSnapshot = sqlite.__getSnapshot(freshDatabaseName);
-    expect(freshSnapshot.schemaVersion).toBe(3);
+    expect(freshSnapshot.schemaVersion).toBe(4);
     expect(freshSnapshot.tableColumns.WorkoutSession).toEqual(
       expect.arrayContaining(['generatedForDate', 'liveState'])
     );
@@ -1272,7 +1272,7 @@ describe('schedule generation service', () => {
     await runMigrations(priorDatabaseName);
 
     const priorSnapshot = sqlite.__getSnapshot(priorDatabaseName);
-    expect(priorSnapshot.schemaVersion).toBe(3);
+    expect(priorSnapshot.schemaVersion).toBe(4);
     expect(priorSnapshot.tableColumns.WorkoutSession).toEqual(
       expect.arrayContaining(['generatedForDate', 'liveState'])
     );

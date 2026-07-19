@@ -84,6 +84,7 @@ function habitLogRow(overrides: Partial<HabitLogRow> = {}): HabitLogRow {
     userId: 'user-id',
     date: '2026-05-07',
     completed: 0,
+    streakValid: 0,
     value: null,
     effortRating: null,
     note: null,
@@ -166,6 +167,7 @@ describe('habit mappers', () => {
     const log = rowToHabitLog(row);
 
     expect(log.completed).toBe(false);
+    expect(log.streakValid).toBe(false);
     expect(log.value).toBeUndefined();
     expect(log.note).toBeUndefined();
     expect(habitLogToRow(log)).toEqual(row);
