@@ -393,7 +393,8 @@ jest.mock('expo-sqlite', () => {
       }
 
       if (source.includes('UPDATE WorkoutSession') && source.includes('SET status = ?')) {
-        const sessionId = readStringParam(params, 11, 'sessionId');
+        const writesLiveState = source.includes('liveState = ?');
+        const sessionId = readStringParam(params, writesLiveState ? 12 : 11, 'sessionId');
         const index = this.workoutSessions.findIndex((row) => row.id === sessionId);
 
         if (index >= 0) {
@@ -410,6 +411,9 @@ jest.mock('expo-sqlite', () => {
             durationOverridden: readNumberParam(params, 8, 'durationOverridden'),
             rpe: readNullableNumberParam(params, 9, 'rpe'),
             note: readNullableStringParam(params, 10, 'note'),
+            liveState: writesLiveState
+              ? readNullableStringParam(params, 11, 'liveState')
+              : this.workoutSessions[index].liveState,
           };
         }
 
@@ -1582,6 +1586,8 @@ describe('schedule generation service', () => {
       appMode: AppMode.COMBINED,
       preferences: preferences({ dayEndTime: '03:00' }),
     });
+    await seedUser('user-id', 'America/New_York');
+    await seedUserPreferences('user-id', '03:00');
     await insertWorkoutSession({
       id: 'planned-session',
       templateId: 'template-id',

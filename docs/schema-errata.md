@@ -55,3 +55,11 @@ No future schema decision is pending for this ambiguity.
 3. Generation runs before Today composition and covers logical dates from the current logical date through the look-ahead window. Manually created sessions carry generatedForDate NULL and are never touched by generation.
 4. Session completion updates the existing planned/live row for that session; completion never inserts a new row when the session already exists.
 ---
+---
+## Live Session State (liveState)
+
+1. WorkoutSession.liveState holds a JSON snapshot for in-progress sessions only: { currentExerciseIndex, completedExerciseIds, updatedAt }. It is written on every explicit state change — exercise advance, mark-done, un-mark, and edit-mode exercise add/remove — and set to NULL when the session completes or is discarded.
+2. Resume reconstructs explicit completion state from liveState only. Logged sets are persisted independently and are never used to infer exercise completion. If liveState is missing or unparseable for a live session, resume starts at the first exercise with no exercises marked complete, preserving all logged sets; nothing is inferred.
+3. At most one workout session may be live at a time. Starting a session while another is live is blocked; the user must resume or finish the live session first.
+4. The 20-exercise maximum is enforced in the service layer for template exercise configs and for in-session additions. Exceeding it is a hard error, never a warning.
+---
