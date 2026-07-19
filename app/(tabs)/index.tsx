@@ -188,7 +188,7 @@ export default function TodayScreen() {
 
   const handleHabitClear = useCallback(
     async (item: TodayHabitItem) => {
-      const result = undoTodayHabitCompletion(item.id);
+      const result = await undoTodayHabitCompletion(item.id);
 
       if (!result.ok) {
         Alert.alert('Could not clear habit', result.message);
@@ -225,7 +225,7 @@ export default function TodayScreen() {
       const selectedDate = viewModel?.selectedDate;
       if (!selectedDate) return;
 
-      const result = completeTodayHabit(item.habitId, selectedDate);
+      const result = await completeTodayHabit(item.habitId, selectedDate);
 
       if (!result.ok) {
         Alert.alert('Could not complete habit', result.message);
@@ -248,7 +248,7 @@ export default function TodayScreen() {
       const item = habitValueItem;
       if (!selectedDate || !item) return;
 
-      const result = saveTodayHabitValue(item.habitId, selectedDate, value);
+      const result = await saveTodayHabitValue(item.habitId, selectedDate, value);
 
       if (!result.ok) {
         Alert.alert('Could not save habit value', result.message);
@@ -271,7 +271,7 @@ export default function TodayScreen() {
   const handleHabitUndo = useCallback(async () => {
     if (!habitUndo) return;
 
-    const result = undoTodayHabitCompletion(habitUndo.logId);
+    const result = await undoTodayHabitCompletion(habitUndo.logId);
 
     if (!result.ok) {
       Alert.alert('Could not undo habit', result.message);

@@ -1,6 +1,13 @@
 import dayjs from 'dayjs';
 import { getDb } from './db';
-import { useHabitStore } from '../store/habitStore';
+import { clearLog, completeBinary, setMeasurableValue } from './habitLogService';
+import { getHabitById, listHabits } from './habitService';
+import { resolveTargets } from './habitTargetService';
+import {
+  HABIT_LOG_ROW_COLUMNS,
+  rowToHabitLog,
+  type HabitLogRow,
+} from './mappers/habitLogMapper';
 import { useUserStore } from '../store/userStore';
 import {
   formatTodayDateLabels,
@@ -142,7 +149,9 @@ export async function getTodayViewModel(
     dayEndTime
   );
   const userId = params.userId ?? userState.userId;
-  const habitItems = getStoreBackedHabitItems(selectedDate, selectedCurrentLogicalDate);
+  const habitItems = userId
+    ? await loadPersistedHabitItems(userId, selectedDate, selectedCurrentLogicalDate)
+    : [];
   const sortedHabitItems = sortTodayHabitItems(habitItems);
   const habitSummary = getTodayHabitCompletionSummary(sortedHabitItems);
   const fitnessItems = userId ? await loadPersistedFitnessItems(userId, selectedDate) : [];
@@ -241,13 +250,12 @@ export async function moveTodayFitnessSessionToTomorrow(
   return { ok: true, kind, sessionId, destinationDate };
 }
 
-export function completeTodayHabit(
+export async function completeTodayHabit(
   habitId: string,
   selectedDate: dayjs.ConfigType,
-  completedAt = new Date().toISOString()
-): TodayHabitLogActionResult {
-  const state = useHabitStore.getState();
-  const habit = state.habits.find((candidate) => candidate.id === habitId);
+  instant: Date | string = new Date()
+): Promise<TodayHabitLogActionResult> {
+  const habit = await getHabitById(habitId);
 
   if (!habit || habit.isHidden || habit.archivedAt) {
     return {
@@ -258,30 +266,25 @@ export function completeTodayHabit(
   }
 
   const date = dayjs(selectedDate).startOf('day').format('YYYY-MM-DD');
-  const existingLog = findHabitLogForDate(state.todayLogs, habitId, date);
-  const log: HabitLog = {
-    id: existingLog?.id ?? generateId(),
-    habitId,
-    userId: habit.userId,
-    date,
-    completed: true,
-    value: existingLog?.value,
-    effortRating: existingLog?.effortRating,
-    note: existingLog?.note,
-    completedAt,
-  };
 
-  state.upsertLog(log);
-
-  return { ok: true, log };
+  try {
+    const log = await completeBinary(habitId, date, toActionInstant(instant));
+    return { ok: true, log };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'invalid_value',
+      message: getErrorMessage(error, 'Habit could not be completed.'),
+    };
+  }
 }
 
-export function saveTodayHabitValue(
+export async function saveTodayHabitValue(
   habitId: string,
   selectedDate: dayjs.ConfigType,
   value: number,
-  completedAt = new Date().toISOString()
-): TodayHabitLogActionResult {
+  instant: Date | string = new Date()
+): Promise<TodayHabitLogActionResult> {
   if (!Number.isFinite(value) || value < 0) {
     return {
       ok: false,
@@ -290,8 +293,7 @@ export function saveTodayHabitValue(
     };
   }
 
-  const state = useHabitStore.getState();
-  const habit = state.habits.find((candidate) => candidate.id === habitId);
+  const habit = await getHabitById(habitId);
 
   if (!habit || habit.isHidden || habit.archivedAt) {
     return {
@@ -302,29 +304,24 @@ export function saveTodayHabitValue(
   }
 
   const date = dayjs(selectedDate).startOf('day').format('YYYY-MM-DD');
-  const target = getEffectiveHabitTarget(state.habitTargets, habitId, date);
-  const existingLog = findHabitLogForDate(state.todayLogs, habitId, date);
-  const completed = isHabitValueComplete(value, target);
-  const log: HabitLog = {
-    id: existingLog?.id ?? generateId(),
-    habitId,
-    userId: habit.userId,
-    date,
-    completed,
-    value,
-    effortRating: existingLog?.effortRating,
-    note: existingLog?.note,
-    completedAt: completed ? existingLog?.completedAt ?? completedAt : undefined,
-  };
 
-  state.upsertLog(log);
-
-  return { ok: true, log };
+  try {
+    const log = await setMeasurableValue(habitId, date, toActionInstant(instant), value);
+    return { ok: true, log };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'invalid_value',
+      message: getErrorMessage(error, 'Habit value could not be saved.'),
+    };
+  }
 }
 
-export function undoTodayHabitCompletion(logId: string): TodayHabitUndoActionResult {
-  const state = useHabitStore.getState();
-  const log = state.todayLogs.find((candidate) => candidate.id === logId);
+export async function undoTodayHabitCompletion(
+  logId: string,
+  instant: Date | string = new Date()
+): Promise<TodayHabitUndoActionResult> {
+  const log = await getHabitLogById(logId);
 
   if (!log) {
     return {
@@ -334,7 +331,25 @@ export function undoTodayHabitCompletion(logId: string): TodayHabitUndoActionRes
     };
   }
 
-  state.removeLog(logId);
+  const habit = await getHabitById(log.habitId);
+
+  if (!habit || habit.isHidden || habit.archivedAt) {
+    return {
+      ok: false,
+      reason: 'not_found',
+      message: 'Habit was not found.',
+    };
+  }
+
+  try {
+    await clearLog(log.habitId, log.date, toActionInstant(instant));
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'not_found',
+      message: getErrorMessage(error, 'Habit log could not be cleared.'),
+    };
+  }
 
   return { ok: true, logId };
 }
@@ -366,47 +381,51 @@ function normalizeSelectedDate(selectedDate: dayjs.ConfigType): string {
   return dayjs(selectedDate).startOf('day').format('YYYY-MM-DD');
 }
 
-function getStoreBackedHabitItems(
+async function loadPersistedHabitItems(
+  userId: string,
   selectedDate: string,
   currentLogicalDate: string
-): TodayHabitItem[] {
-  const { habits, todayLogs, habitTargets } = useHabitStore.getState();
-  const logsByHabitId = new Map(
-    todayLogs
-      .filter((log) => log.date === selectedDate)
-      .map((log) => [log.habitId, log])
+): Promise<TodayHabitItem[]> {
+  const visibleHabits = (await listHabits(userId)).filter(
+    (habit) => !habit.isHidden && !habit.archivedAt
   );
-  const effectiveTargetsByHabitId = getEffectiveHabitTargetsByHabitId(
-    habitTargets,
-    selectedDate
-  );
-  const logsByHabitDate = getHabitLogsByHabitDate(todayLogs);
+  const habitIds = visibleHabits.map((habit) => habit.id);
+  const [targetsByHabitId, logsByHabitId, completedLogs] = await Promise.all([
+    resolveTargets(habitIds, selectedDate),
+    loadSelectedHabitLogsByHabitId(habitIds, selectedDate),
+    loadCompletedHabitLogsThroughDate(habitIds, selectedDate),
+  ]);
+  const logsByHabitDate = getHabitLogsByHabitDate(completedLogs);
 
-  // TODO: Replace this store-backed read with persisted Habit + HabitTarget
-  // queries once the habit service layer exists.
-  return habits
-    .filter((habit) => !habit.isHidden && !habit.archivedAt)
-    .map((habit) =>
+  return visibleHabits.flatMap((habit) => {
+    const target = targetsByHabitId.get(habit.id);
+
+    if (!target) {
+      return [];
+    }
+
+    return [
       mapHabitToTodayItem(
         habit,
         logsByHabitId.get(habit.id),
-        effectiveTargetsByHabitId.get(habit.id),
+        target,
         logsByHabitDate,
         selectedDate,
         currentLogicalDate
-      )
-    );
+      ),
+    ];
+  });
 }
 
 function mapHabitToTodayItem(
   habit: Habit,
   log: HabitLog | undefined,
-  target: HabitTarget | undefined,
+  target: HabitTarget,
   logsByHabitDate: Map<string, HabitLog>,
   selectedDate: string,
   currentLogicalDate: string
 ): TodayHabitItem {
-  const habitType: TodayHabitType = target?.habitType ?? 'binary';
+  const habitType: TodayHabitType = target.habitType;
 
   return {
     id: log?.id ?? habit.id,
@@ -416,11 +435,11 @@ function mapHabitToTodayItem(
     status: getHabitStatus(log, selectedDate, currentLogicalDate),
     habitType,
     displayOrder: habit.displayOrder,
-    scheduledTime: target?.scheduledTime,
+    scheduledTime: target.scheduledTime,
     completedAt: log?.completedAt,
     value: log?.value,
-    targetValue: target?.targetValue,
-    targetUnit: target?.targetUnit,
+    targetValue: target.targetValue,
+    targetUnit: target.targetUnit,
     streakCount: getHabitStreakCount(habit.id, selectedDate, log, logsByHabitDate),
   };
 }
@@ -446,6 +465,65 @@ async function loadPersistedFitnessItems(
   ]);
 
   return [...workoutItems, ...cardioItems].sort(compareFitnessItems);
+}
+
+async function loadSelectedHabitLogsByHabitId(
+  habitIds: string[],
+  selectedDate: string
+): Promise<Map<string, HabitLog>> {
+  if (habitIds.length === 0) {
+    return new Map();
+  }
+
+  const placeholders = habitIds.map(() => '?').join(', ');
+  const rows = await getDb().getAllAsync<HabitLogRow>(
+    `SELECT ${HABIT_LOG_ROW_COLUMNS}
+    FROM HabitLog
+    WHERE habitId IN (${placeholders})
+      AND date = ?`,
+    ...habitIds,
+    selectedDate
+  );
+
+  return new Map(rows.map((row) => {
+    const log = rowToHabitLog(row);
+    return [log.habitId, log];
+  }));
+}
+
+async function loadCompletedHabitLogsThroughDate(
+  habitIds: string[],
+  selectedDate: string
+): Promise<HabitLog[]> {
+  if (habitIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = habitIds.map(() => '?').join(', ');
+  const rows = await getDb().getAllAsync<HabitLogRow>(
+    `SELECT ${HABIT_LOG_ROW_COLUMNS}
+    FROM HabitLog
+    WHERE habitId IN (${placeholders})
+      AND date <= ?
+      AND completed = 1
+    ORDER BY habitId ASC, date DESC`,
+    ...habitIds,
+    selectedDate
+  );
+
+  return rows.map(rowToHabitLog);
+}
+
+async function getHabitLogById(logId: string): Promise<HabitLog | null> {
+  const row = await getDb().getFirstAsync<HabitLogRow>(
+    `SELECT ${HABIT_LOG_ROW_COLUMNS}
+    FROM HabitLog
+    WHERE id = ?
+    LIMIT 1`,
+    logId
+  );
+
+  return row ? rowToHabitLog(row) : null;
 }
 
 async function loadWorkoutFitnessItems(
@@ -609,50 +687,6 @@ function formatCardioTitle(type: string, subtype: string | null): string {
   return subtype ? `${primary} · ${subtype}` : primary;
 }
 
-function findHabitLogForDate(
-  logs: readonly HabitLog[],
-  habitId: string,
-  date: string
-): HabitLog | undefined {
-  return logs.find((log) => log.habitId === habitId && log.date === date);
-}
-
-function getEffectiveHabitTargetsByHabitId(
-  targets: readonly HabitTarget[],
-  selectedDate: string
-): Map<string, HabitTarget> {
-  return targets.reduce<Map<string, HabitTarget>>((targetsByHabitId, target) => {
-    const current = targetsByHabitId.get(target.habitId);
-
-    if (dayjs(target.effectiveFrom).isAfter(selectedDate, 'day')) {
-      return targetsByHabitId;
-    }
-
-    if (!current || compareHabitTargetRecency(target, current) > 0) {
-      targetsByHabitId.set(target.habitId, target);
-    }
-
-    return targetsByHabitId;
-  }, new Map());
-}
-
-function getEffectiveHabitTarget(
-  targets: readonly HabitTarget[],
-  habitId: string,
-  selectedDate: string
-): HabitTarget | undefined {
-  return getEffectiveHabitTargetsByHabitId(
-    targets.filter((target) => target.habitId === habitId),
-    selectedDate
-  ).get(habitId);
-}
-
-function compareHabitTargetRecency(a: HabitTarget, b: HabitTarget): number {
-  const effectiveCompare = a.effectiveFrom.localeCompare(b.effectiveFrom);
-  if (effectiveCompare !== 0) return effectiveCompare;
-  return a.createdAt.localeCompare(b.createdAt);
-}
-
 function getHabitLogsByHabitDate(logs: readonly HabitLog[]): Map<string, HabitLog> {
   return logs.reduce<Map<string, HabitLog>>((logsByHabitDate, log) => {
     logsByHabitDate.set(getHabitDateKey(log.habitId, log.date), log);
@@ -690,22 +724,16 @@ function getHabitDateKey(habitId: string, date: string): string {
   return `${habitId}:${date}`;
 }
 
-function isHabitValueComplete(value: number, target: HabitTarget | undefined): boolean {
-  if (target?.targetValue === undefined) {
-    return value > 0;
+function toActionInstant(instant: Date | string): Date {
+  const date = instant instanceof Date ? new Date(instant.getTime()) : new Date(instant);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('instant must be a valid Date or ISO string.');
   }
 
-  if (target.directionality === 'at_most') {
-    return value <= target.targetValue;
-  }
-
-  return value >= target.targetValue;
+  return date;
 }
 
-function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (placeholder) => {
-    const random = (Math.random() * 16) | 0;
-    const value = placeholder === 'x' ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
