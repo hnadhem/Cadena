@@ -63,3 +63,47 @@ No future schema decision is pending for this ambiguity.
 3. At most one workout session may be live at a time. Starting a session while another is live is blocked; the user must resume or finish the live session first.
 4. The 20-exercise maximum is enforced in the service layer for template exercise configs and for in-session additions. Exceeding it is a hard error, never a warning.
 ---
+---
+## Nutrition Logging Contract
+
+1. NutritionLogEntry is a contribution row, not an in-place aggregate. A day's total for a metric = SUM of that day's NutritionLogEntry rows for that metric. There is no per-metric unique constraint.
+2. NutritionLogEntry.sourceFoodLogEntryId (nullable FK to NutritionFoodLogEntry) records provenance. Null = manual entry. Populated = the food entry that wrote it. Food-entry deletion and quantity edits target exactly their own rows; manual rows are never touched by food operations.
+3. Logging is write-through: rows are persisted immediately on log. The in-app 3-second undo is deletion — it removes the food entry and its contribution rows (or the single manual row) through the same deletion path as any later removal. Writes are never deferred pending the undo window.
+4. NutritionTarget follows the Target Resolution Contract: the target in force for a date is the row with the greatest effectiveFrom <= that date; same createdAt-then-id tie-break; changes are forward-only and never re-grade or reinterpret past days.
+---
+## Streak Validity (streakValid)
+
+1. HabitLog.streakValid is graded at write time alongside completed, against the HabitTarget in force on the LOGGED date: streakCompletionThreshold if set, otherwise full targetValue, applying the target's directionality (at_most: value <= threshold).
+2. For binary habits and all frequency-based types, streakValid equals completed; thresholds never apply to them.
+3. Edits re-grade streakValid against the same logged-date target. Later target changes never re-grade existing rows.
+4. The v13 statement that completed is the "single source of truth for streak calculation" is amended: streak calculation reads HabitLog rows (streakValid) plus HabitStreakPause records, and nothing else. Streak calculation remains unimplemented until explicitly scoped; this section defines storage and grading only.
+---
+## Medication Compliance Contract
+
+1. Expected doses are materialized: when a day is first composed for the user, that day's MedicationLog rows are generated (taken = false, doseNumber 1..totalDosesPerDay as of that day) for each active medication.
+2. A day's compliance is judged against its own existing rows, permanently. totalDosesPerDay and doseTimes changes apply only to days not yet materialized.
+3. A day with zero rows is "not tracked" — distinct from missed. Missed is derived (row exists, taken = false, logical day ended) and never stored. The medicationMissed notification counts the same materialized rows compliance does.
+4. Retroactive dose logging materializes the past day's rows at the current setting when that day is opened, within the standard retroactive window.
+5. Doc correction: MedicationLog.taken is a per-dose compliance flag. The duplicated per-day description in v13 is erroneous.
+---
+## Body Metric Corrections
+
+1. One row per (userId, type, date), enforced by a unique index. Logging a metric for a date that already has a row edits that row (matching the DailyLog check-in pattern).
+2. value and note are editable in place; loggedAt is immutable. Row deletion is allowed and permanent.
+3. "Append-only" means new measurements never overwrite historical rows and current value = the most recent date's row. It does not forbid correcting a row's own value.
+4. Bodyweight remains on DailyLog. No bodyweight BodyMetricType may be added; two storage locations for one number is prohibited.
+---
+## Tally Periods and Habit Link
+
+1. Current-period lookup is by containment: the row where periodStartDate <= today <= periodEndDate, not by anchor equality. periodEndDate for never-reset items is NULL, treated as open-ended in containment checks.
+2. weekStartDay changes are forward-only: existing period rows keep their anchors; new periods use the new setting. Weekly digest scheduling follows the same rule.
+3. linkedTallyItemId requires the TallyItem to have resetFrequency = daily, enforced at link time. Changing resetFrequency on a linked item is blocked while the link exists.
+4. A tally increment on a linked item routes through the habit log service (submitMeasurableValue/addMeasurableCompletion) so it grades, timestamps, and journals as a completion; the TallyLog write happens in that same transaction. Habit-side value writes propagate to TallyLog identically. One service owns both sides; no independent write path may exist.
+---
+## Notification and Misc Contracts
+
+1. scheduledNotificationIds uses composite string keys for multi-instance notification types: medication:{medicationId}:dose:{doseNumber}. One flat map; no additional table.
+2. All end-of-day notification instants (medicationMissed, future streak notifications) are computed by the shared logical-day utilities; no notification code computes day boundaries independently.
+3. EnabledModule enum is defined as: medications. Future modules extend this enum; module gating reads only modulesEnabled.
+4. Goal auto-achievement respects PRType directionality (best_pace_at_distance: lower is better). Achievement is one-way: status never reverts from achieved.
+---
