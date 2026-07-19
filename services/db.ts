@@ -592,6 +592,25 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 2,
+    up: (db) => {
+      db.execSync(`
+        CREATE TABLE IF NOT EXISTS HabitCompletionEvent (
+          id TEXT PRIMARY KEY NOT NULL,
+          userId TEXT NOT NULL REFERENCES User(id),
+          habitId TEXT NOT NULL REFERENCES Habit(id),
+          date TEXT NOT NULL,
+          occurredAt TEXT NOT NULL,
+          value REAL,
+          createdAt TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_habitCompletionEvent_habitId_date
+          ON HabitCompletionEvent(habitId, date);
+      `);
+    },
+  },
 ];
 
 export async function runMigrations(databaseName = 'habit.db'): Promise<void> {

@@ -10,6 +10,9 @@ import {
 
 const TABLE = 'HabitLog';
 
+export const HABIT_LOG_ROW_COLUMNS =
+  'id, habitId, userId, date, completed, value, effortRating, note, completedAt';
+
 export interface HabitLogRow {
   id: string;
   habitId: string;

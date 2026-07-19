@@ -30,3 +30,20 @@ No future schema decision is pending for this ambiguity.
 2. All completion grading (habitType, targetValue, directionality, streakCompletionThreshold) uses the target in force on the LOGGED date, evaluated at write time. Later target changes never re-grade existing HabitLog rows. Editing a logged value re-grades against the same logged-date target.
 3. A date with no target in force (before the earliest effectiveFrom) is not loggable.
 ---
+---
+## Habit Log Write Semantics
+
+1. **Unified clear/edit model.** Clearing a habit for a day deletes the HabitLog row, for all habit types. A binary HabitLog row exists only with completed = true; completed = false is a state exclusive to measurable habits carrying a logged value. "Never completed" and "cleared" are intentionally indistinguishable.
+2. **Grading at write time.** completed is graded when the row is written or its value is edited, against the HabitTarget in force on the LOGGED date (resolveTarget), using targetValue and directionality. Later target changes never re-grade existing rows.
+3. **Aggregation.** Multiple completions on one logical date accumulate into the single (habitId, date) row: value sums, completedAt holds the most recent completion instant, completed is re-graded against the aggregate. Per-completion granularity is not stored in HabitLog.
+4. **Edit vs. add.** Adding a completion aggregates (rule 3). Editing sets the value outright and re-grades against the same logged-date target. Edits never modify completedAt; completion instants are written only by completion operations.
+5. **completedAt.** Set to the action instant when the logged date equals the logical date of that instant; null otherwise (retroactive logs), per schema.
+6. **Target tie-break.** When two HabitTarget phases share an effectiveFrom, the later createdAt wins (then id, descending). Codifies the Task 1 resolver ordering.
+---
+---
+## HabitCompletionEvent Journal
+
+1. HabitCompletionEvent is an append-only, write-only journal of completion actions. In v1 nothing reads it; it exists to preserve per-completion granularity (instants and increments) that HabitLog's one-row-per-day aggregation discards.
+2. HabitLog remains the sole source of truth for completion, grading, streaks, and aggregates. If journal and log disagree, the log wins by definition. No sync invariant exists or may be introduced.
+3. Completion operations append one event atomically with the log write; clearing a day deletes that day's events; edits touch the journal in no way.
+---
