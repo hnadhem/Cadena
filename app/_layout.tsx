@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runMigrations } from '../services/db';
+import { seedBuiltInData } from '../services/seedService';
 import { useUserStore } from '../store/userStore';
 import { colors } from '../constants/theme';
 
@@ -16,6 +17,7 @@ export default function RootLayout() {
       try {
         await runMigrations();
         await useUserStore.getState().bootstrap();
+        await seedBuiltInData();
 
         if (mounted) {
           setReady(true);
