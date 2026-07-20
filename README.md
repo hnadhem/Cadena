@@ -48,7 +48,7 @@ Cadena is currently in active development. The Figma prototype shows the intende
 ## Core Features
 
 - **Today view:** Central daily screen with fitness activity, habit summary, habit rows, and quick actions.
-- **Habit foundation:** Typed habit models, Zustand habit state, and Today habit sorting/completion summary logic.
+- **Habit foundation:** Typed habit models, service-backed persistence, and Today habit sorting/completion summary logic.
 - **Fitness foundation:** Workout/cardio schema, session store, Today fitness cards, and Skip / Move to Tomorrow actions.
 - **Quick actions:** Check-in, Nutrition, and tally bottom sheets currently validate interaction patterns with local state.
 - **Navigation scaffold:** Expo Router tabs for Fitness, Today, and Habits, plus placeholder routes for planned feature areas.
@@ -86,7 +86,8 @@ Built:
 - Expo app scaffold and tab navigation
 - SQLite schema/migration setup
 - Typed domain models
-- Zustand stores for user, habit, and workout state
+- Zustand stores for user preferences and workout session state
+- Habit flows persist directly through services (`UI -> service -> SQLite`); stores are used only where ephemeral in-memory state exists between start and commit.
 - Initial Today screen and supporting service/selectors
 - Placeholder screens for planned Fitness, Habits, workout/cardio, settings, nutrition, medication, and tally flows
 

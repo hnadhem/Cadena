@@ -22,7 +22,7 @@ Keep durable, repo-wide guidance here. Put tool-specific behavior in `CLAUDE.md`
 - `components/today/` - Today root UI components.
 - `services/db.ts` - SQLite database setup and migration runner.
 - `services/todayService.ts` - Today view-model composition and fitness session actions.
-- `store/` - Zustand stores for habits, user preferences, and workouts.
+- `store/` - Zustand stores for user preferences and workout session state; habit flows use `UI -> service -> SQLite` directly because stores are reserved for ephemeral in-memory state between start and commit.
 - `types/schema.ts` - core TypeScript data model definitions.
 - `types/today.ts` - normalized Today view model contract.
 - `constants/` - enums and theme tokens.
