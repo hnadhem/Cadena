@@ -3,17 +3,33 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runMigrations } from '../services/db';
+import { useUserStore } from '../store/userStore';
 import { colors } from '../constants/theme';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    runMigrations()
-      .then(() => setReady(true))
-      .catch((err) => {
-        console.error('Migration failed:', err);
-      });
+    let mounted = true;
+
+    async function prepareApp() {
+      try {
+        await runMigrations();
+        await useUserStore.getState().bootstrap();
+
+        if (mounted) {
+          setReady(true);
+        }
+      } catch (err) {
+        console.error('App bootstrap failed:', err);
+      }
+    }
+
+    prepareApp();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (!ready) {

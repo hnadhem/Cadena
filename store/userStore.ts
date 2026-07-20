@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { AppMode } from '../constants/enums';
+import { getOrCreateUser } from '../services/userService';
 import type { UserPreferences } from '../types/schema';
 import { getDeviceTimezone } from '../utils/dateUtils';
 
@@ -11,6 +12,7 @@ interface UserState {
   setAppMode: (mode: AppMode) => void;
   setTimezone: (timezone: string) => void;
   setPreferences: (prefs: UserPreferences) => void;
+  bootstrap: () => Promise<void>;
   loadUser: (userId: string, prefs: UserPreferences, timezone?: string) => void;
 }
 
@@ -26,6 +28,17 @@ export const useUserStore = create<UserState>((set) => ({
 
   setPreferences: (prefs) =>
     set({ preferences: prefs, appMode: prefs.appMode }),
+
+  bootstrap: async () => {
+    const { user, preferences } = await getOrCreateUser();
+
+    set({
+      userId: user.id,
+      timezone: user.timezone,
+      preferences,
+      appMode: preferences.appMode,
+    });
+  },
 
   loadUser: (userId, prefs, timezone) =>
     set({
