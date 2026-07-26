@@ -3,6 +3,7 @@ import { AppMode, EnabledModule, FrequencyType } from '../../constants/enums';
 import { useUserStore } from '../../store/userStore';
 import type { HabitLog, UserPreferences } from '../../types/schema';
 import { getDb, runMigrations } from '../db';
+import { generateSessions } from '../scheduleGenerationService';
 import {
   completeTodayHabit,
   getTodayViewModel,
@@ -39,6 +40,10 @@ interface MockSqliteControls {
   __clearQueryLog: () => void;
   __getQueryLog: () => QueryLogEntry[];
 }
+
+jest.mock('../scheduleGenerationService', () => ({
+  generateSessions: jest.fn(),
+}));
 
 jest.mock('expo-sqlite', () => {
   type MockBindValue = string | number | null | boolean | Uint8Array;
@@ -1242,6 +1247,8 @@ function getMockSqlite(): MockSqliteControls {
   return jest.requireMock('expo-sqlite') as MockSqliteControls;
 }
 
+const mockGenerateSessions = jest.mocked(generateSessions);
+
 function habitRowValues(row: HabitRow): Array<string | number | null> {
   return [
     row.id,
@@ -1307,6 +1314,11 @@ function habitLogRowValues(row: HabitLogRow): Array<string | number | null> {
 
 describe('todayService', () => {
   beforeEach(async () => {
+    mockGenerateSessions.mockReset();
+    mockGenerateSessions.mockResolvedValue({
+      workoutInsertAttempts: 0,
+      cardioInsertAttempts: 0,
+    });
     await runMigrations(':memory:');
     getMockSqlite().__clearQueryLog();
     await seedUser();
@@ -1607,6 +1619,102 @@ describe('todayService', () => {
       'medication',
       'tally',
     ]);
+  });
+
+  it('includes sessions generated during Today composition', async () => {
+    setLoadedUser();
+    mockGenerateSessions.mockImplementation(async (userId, instant) => {
+      expect(userId).toBe('user-id');
+      expect(instant).toBe('2026-05-07T12:00:00.000Z');
+
+      await seedWorkoutSession({
+        id: 'generated-workout',
+        templateId: 'workout-template',
+        scheduleId: 'workout-schedule',
+        name: 'Upper Body',
+        templateNameSnapshot: 'Upper Body Template',
+        scheduledDate: '2026-05-07',
+        scheduledTime: '07:00',
+        loggedAt: '2026-05-07T12:00:00.000Z',
+      });
+      await seedCardioSession({
+        id: 'generated-cardio',
+        templateId: 'cardio-template',
+        scheduleId: 'cardio-schedule',
+        templateNameSnapshot: 'Easy Run',
+        type: 'running',
+        scheduledDate: '2026-05-07',
+        scheduledTime: '18:00',
+        loggedAt: '2026-05-07T12:00:00.000Z',
+      });
+
+      return {
+        workoutInsertAttempts: 1,
+        cardioInsertAttempts: 1,
+      };
+    });
+
+    const viewModel = await getTodayViewModel({
+      selectedDate: '2026-05-07',
+      currentDate: '2026-05-07T12:00:00.000Z',
+      preferences: preferences(),
+    });
+
+    expect(mockGenerateSessions).toHaveBeenCalledTimes(1);
+    expect(viewModel.fitnessItems).toEqual([
+      expect.objectContaining({
+        id: 'generated-workout',
+        kind: 'workout',
+        title: 'Upper Body',
+        status: 'planned',
+        scheduledDate: '2026-05-07',
+        scheduledTime: '07:00',
+        templateId: 'workout-template',
+        scheduleId: 'workout-schedule',
+      }),
+      expect.objectContaining({
+        id: 'generated-cardio',
+        kind: 'cardio',
+        title: 'Easy Run',
+        status: 'planned',
+        scheduledDate: '2026-05-07',
+        scheduledTime: '18:00',
+        templateId: 'cardio-template',
+        scheduleId: 'cardio-schedule',
+      }),
+    ]);
+  });
+
+  it('keeps composing Today when schedule generation fails', async () => {
+    setLoadedUser();
+    const generationError = new Error('Forced schedule generation failure.');
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockGenerateSessions.mockRejectedValue(generationError);
+    await seedWorkoutSession({
+      id: 'persisted-workout',
+      name: 'Persisted Workout',
+      scheduledDate: '2026-05-07',
+      scheduledTime: '09:00',
+    });
+
+    const viewModel = await getTodayViewModel({
+      selectedDate: '2026-05-07',
+      currentDate: '2026-05-07T12:00:00.000Z',
+      preferences: preferences(),
+    });
+
+    expect(viewModel.fitnessItems).toEqual([
+      expect.objectContaining({
+        id: 'persisted-workout',
+        title: 'Persisted Workout',
+      }),
+    ]);
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Schedule generation failed during Today composition.',
+      generationError
+    );
+
+    warnSpy.mockRestore();
   });
 
   it('loads cardio items by cardioDate while preserving timestamp date checks', async () => {

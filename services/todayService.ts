@@ -474,8 +474,6 @@ async function loadPersistedFitnessItems(
   userId: string,
   selectedDate: string
 ): Promise<TodayFitnessItem[]> {
-  // TODO: Run workout/cardio schedule generation before this query once that app-open
-  // service exists. This only reads already-persisted sessions.
   const [workoutItems, cardioItems] = await Promise.all([
     loadWorkoutFitnessItems(userId, selectedDate),
     loadCardioFitnessItems(userId, selectedDate),
