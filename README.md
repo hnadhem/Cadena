@@ -50,10 +50,10 @@ Cadena is currently in active development. The Figma prototype shows the intende
 - **Today view:** Central daily screen with fitness activity, habit summary, habit rows, and quick actions.
 - **Habit foundation:** Typed habit models, service-backed persistence, and Today habit sorting/completion summary logic.
 - **Fitness foundation:** Workout/cardio schema, session store, Today fitness cards, and Skip / Move to Tomorrow actions.
-- **Quick actions:** Check-in, Nutrition, and tally bottom sheets currently validate interaction patterns with local state.
+- **Quick actions:** Check-in persists to `DailyLog`; Nutrition and tally bottom sheets currently validate interaction patterns with local state.
 - **Navigation scaffold:** Expo Router tabs for Fitness, Today, and Habits, plus placeholder routes for planned feature areas.
 - **Local data layer:** SQLite setup and migration runner based on the v13 schema reference.
-- **Tests:** Jest coverage for Today selectors, Today service behavior, check-in utilities, tally utilities, and date utilities.
+- **Tests:** Jest coverage for Today selectors, Today service behavior, DailyLog check-in persistence, check-in utilities, tally utilities, and date utilities.
 
 ## Product Rationale
 
@@ -96,7 +96,7 @@ Still in progress:
 - Persisted habit creation, editing, targets, and daily logging
 - Workout/cardio start, resume, and history flows
 - Schedule generation for planned sessions
-- Persisted check-in, tally, nutrition, and medication workflows
+- Persisted tally, nutrition, and medication workflows
 - Progress summaries, onboarding, reminders, and final visual polish
 
 ## Roadmap

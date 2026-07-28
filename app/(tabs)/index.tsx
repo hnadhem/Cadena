@@ -31,6 +31,10 @@ import {
   skipTodayFitnessSession,
   undoTodayHabitCompletion,
 } from '../../services/todayService';
+import {
+  getTodayCheckIn,
+  saveTodayCheckIn,
+} from '../../services/dailyLogService';
 import type {
   TodayFitnessItem,
   TodayHabitItem,
@@ -39,10 +43,8 @@ import type {
 } from '../../types/today';
 import { useUserStore } from '../../store/userStore';
 import {
-  hasTodayCheckIn,
-  saveTodayCheckInByDate,
   type TodayCheckInDraft,
-  type TodayCheckInsByDate,
+  type TodayCheckInEntry,
 } from '../../utils/todayCheckIn';
 import {
   decrementTodayTallyCount,
@@ -60,6 +62,7 @@ interface HabitUndoState {
 }
 
 export default function TodayScreen() {
+  const userId = useUserStore((state) => state.userId);
   const weekStartDay = useUserStore(
     (state) => state.preferences?.weekStartDay ?? 0
   );
@@ -69,7 +72,8 @@ export default function TodayScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
-  const [checkInsByDate, setCheckInsByDate] = useState<TodayCheckInsByDate>({});
+  const [selectedDateCheckIn, setSelectedDateCheckIn] =
+    useState<TodayCheckInEntry | null>(null);
   const [checkInSheetVisible, setCheckInSheetVisible] = useState(false);
   const [tallyLogsByDate, setTallyLogsByDate] = useState<TodayTallyLogsByDate>({});
   const [tallySheetVisible, setTallySheetVisible] = useState(false);
@@ -87,7 +91,11 @@ export default function TodayScreen() {
       const nextViewModel = await getTodayViewModel(
         selectedDateOverride ? { selectedDate: selectedDateOverride } : undefined
       );
+      const nextCheckIn = userId
+        ? await getTodayCheckIn(userId, nextViewModel.selectedDate)
+        : null;
       setViewModel(nextViewModel);
+      setSelectedDateCheckIn(nextCheckIn);
     } catch (err) {
       console.error('Failed to load Today view model:', err);
       setError('Today could not be loaded.');
@@ -95,7 +103,7 @@ export default function TodayScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedDateOverride]);
+  }, [selectedDateOverride, userId]);
 
   useEffect(() => {
     void loadToday();
@@ -313,20 +321,25 @@ export default function TodayScreen() {
   }, []);
 
   const handleCheckInSave = useCallback(
-    (draft: TodayCheckInDraft) => {
+    async (draft: TodayCheckInDraft) => {
       const selectedDate = viewModel?.selectedDate;
-      if (!selectedDate) return;
+      if (!selectedDate || !userId) return;
 
-      const result = saveTodayCheckInByDate(checkInsByDate, selectedDate, draft);
-      if (!result.ok) {
-        Alert.alert('Could not save check-in', result.error);
-        return;
+      try {
+        const result = await saveTodayCheckIn(userId, selectedDate, draft);
+        if (!result.ok) {
+          Alert.alert('Could not save check-in', result.error);
+          return;
+        }
+
+        setSelectedDateCheckIn(result.entry);
+        setCheckInSheetVisible(false);
+      } catch (err) {
+        console.error('Failed to save check-in:', err);
+        Alert.alert('Could not save check-in', 'Try again later.');
       }
-
-      setCheckInsByDate(result.checkInsByDate);
-      setCheckInSheetVisible(false);
     },
-    [checkInsByDate, viewModel?.selectedDate]
+    [userId, viewModel?.selectedDate]
   );
 
   const handleTallyClose = useCallback(() => {
@@ -403,7 +416,7 @@ export default function TodayScreen() {
   const today = viewModel;
   const selectedDate = today?.selectedDate ?? '';
   const hasSelectedDateCheckIn =
-    selectedDate.length > 0 && hasTodayCheckIn(checkInsByDate, selectedDate);
+    selectedDate.length > 0 && selectedDateCheckIn?.date === selectedDate;
   const checkedActionKinds: TodayQuickAction['kind'][] = hasSelectedDateCheckIn
     ? ['checkIn']
     : [];
@@ -483,7 +496,11 @@ export default function TodayScreen() {
       <TodayCheckInSheet
         visible={checkInSheetVisible}
         date={selectedDate}
-        value={selectedDate.length > 0 ? checkInsByDate[selectedDate] : undefined}
+        value={
+          selectedDateCheckIn?.date === selectedDate
+            ? selectedDateCheckIn
+            : undefined
+        }
         onClose={handleCheckInClose}
         onSave={handleCheckInSave}
       />

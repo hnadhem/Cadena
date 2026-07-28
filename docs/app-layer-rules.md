@@ -72,7 +72,7 @@ Routine identity for the "same routine" check (first matching row wins, unless a
 
 Known Today gaps:
 
-- For current pending/unbuilt Today work (persisted HabitTarget, habit logging interactions, quick-action flows, and workout/cardio player routes), see the Roadmap in `README.md`. Do not duplicate that status here.
+- For current pending/unbuilt Today work (persisted HabitTarget, habit logging interactions, remaining quick-action flows, and workout/cardio player routes), see the Roadmap in `README.md`. Do not duplicate that status here.
 - Timezone handling still follows existing `utils/dateUtils.ts` behavior; do not perform a broad timezone refactor as part of Today work unless explicitly requested.
 
 ## Workout Player

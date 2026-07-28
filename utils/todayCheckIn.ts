@@ -124,7 +124,7 @@ export function hasTodayCheckIn(
   return checkInsByDate[date] !== undefined;
 }
 
-function normalizeTodayCheckInEntry(
+export function normalizeTodayCheckInEntry(
   date: string,
   draft: TodayCheckInDraft
 ): TodayCheckInEntry {
